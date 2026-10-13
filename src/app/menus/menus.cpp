@@ -860,6 +860,13 @@ void menus::actions()
 		{
 			audio::set_ingame_movie_muting(ingame_movie_muting);
 		}
+
+		bool pause_music_on_game_pause = audio::pause_music_on_game_pause;
+		const std::string pause_game_label = std::string(localization::text("actions.pause_music_on_game_pause")) + "##pause_music_on_game_pause";
+		if (ImGui::Checkbox(pause_game_label.c_str(), &pause_music_on_game_pause))
+		{
+			audio::set_pause_music_on_game_pause(pause_music_on_game_pause);
+		}
 		ImGui::Separator();
 
 		ImGui::Text("%s", localization::format("actions.mode", {{ "mode", localization::text(audio::shuffle_enabled ? "actions.random" : "actions.sequential") }}).c_str());

@@ -397,7 +397,7 @@ Consequences:
 
 This means playback does not immediately start just because BASS is available. Normal playback depends on later resume conditions from the game integration.
 
-### Loading screens and movie-related muting
+### Loading screens, movie-related muting, and pause-menu pausing
 
 The current NFSU2 mute-detection list includes these packages:
 
@@ -412,6 +412,8 @@ These are treated as game-owned sequences where ECM-R should pause its custom pl
 The NFSU2 reverse-engineering references document `IG_PlayMovie.fng` as the in-game movie package used by career movie playback paths such as `PostRaceFNGObject::PlayMovieIfNeeded`.
 
 ECM-R controls that package with the normal `[config]` `ingame_movie_muting` setting. When enabled, `IG_PlayMovie.fng` is added to `audio::mute_detection` and the runtime reconciles pause state against loaded packages. Fresh configurations enable it by default. When disabled, ECM-R keeps the legacy package-hook behavior and does not treat `IG_PlayMovie.fng` as a mute trigger.
+
+Similarly, in-game pause menu muting is controlled by `[config] pause_music_on_game_pause`. When enabled (default: `true`), the runtime checks whether in-game pause packages (`UI_Pause.fng`, `UI_PauseOptionsMain.fng`, `UI_PauseOptions.fng`, `UI_InGameDialog.fng`, `PauseMain.fng`, `FePauseMain.fng`) are active while in `GameFlowState::Racing` and pauses playback, resuming seamlessly from the current position once unpaused.
 
 ### Metadata and chyron text
 
@@ -450,10 +452,10 @@ The current NFSU2 integration depends on several direct patches and hooks in `sr
 
 The intercepted package-load function currently does this:
 
-- With `[config] ingame_movie_muting = false`, ECM-R keeps the legacy behavior: pause when the loaded package matches the mute-detection list, otherwise resume if `audio::game_paused` is already set.
-- With `[config] ingame_movie_muting = true`, ECM-R first calls the original package-load function and then reconciles pause state against the mute packages that are actually loaded.
+- With `[config] ingame_movie_muting = false` and `[config] pause_music_on_game_pause = false`, ECM-R keeps the legacy behavior: pause when the loaded package matches the mute-detection list, otherwise resume if `audio::game_paused` is already set.
+- With either `ingame_movie_muting = true` or `pause_music_on_game_pause = true`, ECM-R first calls the original package-load function and then reconciles pause state against the mute packages and pause menu packages that are actually loaded.
 
-When movie muting is enabled, `audio::update()` also repeats this reconciliation each game tick so package transitions that do not cleanly map to a single `ShowFNG` event still keep ECM-R paused for the full lifetime of the active movie package.
+When movie muting or pause-menu pausing is enabled, `audio::update()` also repeats this reconciliation each game tick so package transitions that do not cleanly map to a single `ShowFNG` event still keep ECM-R paused for the full lifetime of the active movie or pause package.
 
 ## Overlay, Input, and User Controls
 

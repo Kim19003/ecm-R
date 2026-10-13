@@ -265,6 +265,33 @@ namespace
 		return false;
 	}
 
+	// Reports whether an in-game pause menu package is currently active.
+	bool is_pause_menu_loaded()
+	{
+		return hook::IsPackageLoaded("UI_Pause.fng") ||
+			hook::IsPackageLoaded("UI_PauseOptionsMain.fng") ||
+			hook::IsPackageLoaded("UI_PauseOptions.fng") ||
+			hook::IsPackageLoaded("UI_InGameDialog.fng") ||
+			hook::IsPackageLoaded("PauseMain.fng") ||
+			hook::IsPackageLoaded("FePauseMain.fng");
+	}
+
+	// Determines whether game-driven pause should currently be active.
+	bool should_game_pause()
+	{
+		if (is_mute_package_loaded())
+		{
+			return true;
+		}
+
+		if (audio::pause_music_on_game_pause && global::state == GameFlowState::Racing && is_pause_menu_loaded())
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	// Rebuilds the list of FNG packages that should pause ECM-R for the current game.
 	void rebuild_mute_detection()
 	{
@@ -663,9 +690,9 @@ void audio::update()
 	}
 
 	update_first_chyron_state();
-	if (audio::ingame_movie_muting)
+	if (audio::ingame_movie_muting || audio::pause_music_on_game_pause)
 	{
-		audio::sync_game_pause_from_mute_packages();
+		audio::sync_game_pause();
 	}
 
 	const bool loading_stop_active = audio::stop_music_on_loading_screens && is_loading_state();
@@ -908,20 +935,20 @@ void audio::pause()
 	sync_pause_state();
 }
 
-void audio::sync_game_pause_from_mute_packages()
+void audio::sync_game_pause()
 {
 	if (!audio::is_ready())
 	{
 		return;
 	}
 
-	const bool should_pause = is_mute_package_loaded();
+	const bool should_pause = should_game_pause();
 	if (should_pause == audio::game_paused)
 	{
 		return;
 	}
 
-	logger::log_info(should_pause ? "Mute-package state changed: pause required" : "Mute-package state changed: resume allowed");
+	logger::log_info(should_pause ? "Game pause state changed: pause required" : "Game pause state changed: resume allowed");
 
 	if (should_pause)
 	{
@@ -930,6 +957,11 @@ void audio::sync_game_pause_from_mute_packages()
 	}
 
 	audio::play();
+}
+
+void audio::sync_game_pause_from_mute_packages()
+{
+	sync_game_pause();
 }
 
 void audio::toggle_manual_pause()
@@ -1118,6 +1150,24 @@ void audio::set_ingame_movie_muting(const bool enabled)
 	audio::sync_game_pause_from_mute_packages();
 }
 
+void audio::set_pause_music_on_game_pause(const bool enabled)
+{
+	if (!audio::is_ready())
+	{
+		return;
+	}
+
+	if (audio::pause_music_on_game_pause == enabled)
+	{
+		return;
+	}
+
+	audio::pause_music_on_game_pause = enabled;
+	logger::log_info(enabled ? "Pause menu music pausing enabled" : "Pause menu music pausing disabled");
+	settings::save_config_boolean("pause_music_on_game_pause", audio::pause_music_on_game_pause);
+	audio::sync_game_pause();
+}
+
 void audio::request_current_chyron()
 {
 	if (!audio::is_ready())
@@ -1160,6 +1210,7 @@ std::int32_t audio::ingame_volume = 50;
 std::int32_t audio::applied_volume = -1;
 bool audio::stop_music_on_loading_screens = true;
 bool audio::ingame_movie_muting = true;
+bool audio::pause_music_on_game_pause = true;
 bool audio::shuffle_enabled = true;
 bool audio::repeat_enabled = true;
 bool audio::playlist_ended = false;

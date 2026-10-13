@@ -21,6 +21,7 @@ shuffle_enabled = true
 repeat_enabled = true
 stop_music_on_loading_screens = true
 ingame_movie_muting = true
+pause_music_on_game_pause = true
 log_level = info
 language = en
 
@@ -112,6 +113,11 @@ Game Folder/
 - **Description:** Resolves audio conflicts during comic or story movie sequences.
 - **Default:** `true` for fresh configurations.
 - **Behavior:** When set to `true`, the game treats `IG_PlayMovie.fng` as a mute trigger. The plugin reconciles the active pause state dynamically against loaded interface packages. This prevents background music from clashing with comic voice-overs and ensures playback resumes only after the movie finishes.
+
+### `pause_music_on_game_pause`
+- **Description:** Suspends custom music while the in-game pause menu or confirmation dialog is active.
+- **Default:** `true` for fresh configurations.
+- **Behavior:** When set to `true`, opening the in-game pause menu (`UI_Pause.fng`, `UI_PauseOptionsMain.fng`, `UI_InGameDialog.fng`) while racing or exploring the open world pauses music playback. Playback resumes seamlessly from the exact same position upon unpausing the game. When `false`, music plays uninterrupted across pause menus.
 
 ### `language`
 - **Description:** Selects the overlay language.

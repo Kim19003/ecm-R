@@ -47,6 +47,7 @@ namespace localization
 			{ "actions.shuffle", "Shuffle" },
 			{ "actions.repeat", "Repeat" },
 			{ "actions.ingame_movie_muting", "In-Game Movie Muting" },
+			{ "actions.pause_music_on_game_pause", "Pause Music on Pause Menu" },
 			{ "actions.mode", "Mode: {mode}" },
 			{ "actions.random", "Random" },
 			{ "actions.sequential", "Sequential" },

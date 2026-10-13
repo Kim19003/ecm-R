@@ -69,12 +69,16 @@ public:
 	static void toggle_repeat_enabled();
 	/// Enables or disables in-game movie muting.
 	static void set_ingame_movie_muting(bool enabled);
+	/// Enables or disables music pausing while the in-game pause menu is active.
+	static void set_pause_music_on_game_pause(bool enabled);
 	/// Returns whether the current track still has a resumable BASS stream.
 	static bool can_resume_current_song();
 	/// Applies a game or manual pause to the active track and hides the chyron.
 	static void pause();
 	/// Resumes playback when a paused track can continue.
 	static void play();
+	/// Reconciles game-driven pause with mute-trigger packages and pause menu packages.
+	static void sync_game_pause();
 	/// Reconciles game-driven pause with the mute-trigger packages that are currently loaded.
 	static void sync_game_pause_from_mute_packages();
 	/// Marks the current track metadata to be shown again when the UI allows it.
@@ -109,6 +113,7 @@ public:
 	static std::int32_t applied_volume;
 	static bool stop_music_on_loading_screens;
 	static bool ingame_movie_muting;
+	static bool pause_music_on_game_pause;
 	static bool shuffle_enabled;
 	static bool repeat_enabled;
 	static bool playlist_ended;

@@ -135,9 +135,9 @@ void sub_00537980(int a2, char* a3, int a4)
 		return;
 	}
 
-	if (audio::ingame_movie_muting)
+	if (audio::ingame_movie_muting || audio::pause_music_on_game_pause)
 	{
-		audio::sync_game_pause_from_mute_packages();
+		audio::sync_game_pause();
 		return;
 	}
 
