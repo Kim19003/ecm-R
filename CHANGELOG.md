@@ -7,6 +7,7 @@ This changelog tracks the tagged releases recorded in this repository.
 ## [Unreleased]
 
 ### Added
+- Added automatic Korean Hangul romanization (Revised Romanization of Korean) for the in-game chyron notification, converting Korean song titles and artists to Latin script so they render cleanly in NFSU2's in-game font instead of showing unmappable '?' question marks.
 - Added configurable in-game pause menu music pausing via `[config] pause_music_on_game_pause` (enabled by default), suspending playback while in-game pause menus and dialogs are active and resuming seamlessly from the exact same position upon unpausing.
 - Added a root-level [contributor guide](CONTRIBUTING.md) covering repository policy, NFSU2/Win-x86 development, OpenSpec workflow, runtime safety, validation, and compatibility boundaries.
 - Added `THIRD_PARTY_NOTICES.md` documenting OpenSpec `1.12.0` provenance and MIT terms for the modified `.opencode/commands/opsx-*.md` files while keeping ECM-R/ECM/BttrDrgn attribution separate.
@@ -15,6 +16,9 @@ This changelog tracks the tagged releases recorded in this repository.
 
 ### Changed
 - Clarified the OpenSpec planner workflow for workflow-only changes: scaffold with `openspec new change "<name>"` without `--skip-specs`, then set `skip_specs: true` in the CLI-resolved `.openspec.yaml` before status-driven artifact capture. Compared with target `main`, this corrects the in-progress workflow integration rather than a released ECM-R runtime regression.
+
+### Fixed
+- Fixed ID3v2 and ID3v1 tag parsing mangling UTF-8 text into ISO-8859-1 Mojibake when frames specify encoding byte `0x00` (standard in ID3v2.3 tags storing UTF-8 payloads).
 
 ## [v0.6.0-alpha] - 2026-08-31
 
