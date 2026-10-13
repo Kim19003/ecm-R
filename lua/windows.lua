@@ -131,6 +131,7 @@ workspace "ECM-R"
 			"../src/app/localization/**",
 
 			"../src/utils/fs/**",
+			"../src/utils/korean/**",
 			"../src/utils/logger/**",
 
 			"../deps/kiero/*.h",
