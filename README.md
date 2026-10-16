@@ -186,6 +186,7 @@ MP1 is a legacy compatibility format and is not a primary QA target. Prefer MP3,
 - Can stop custom music during loading screens and resume normal playback flow afterward through the `stop_music_on_loading_screens` setting, which defaults to `true`
 - Allows custom music to continue through loading screens when `stop_music_on_loading_screens` is set to `false`
 - Includes validated muting for comic-style in-game movie sequences from the `Actions` overlay menu or the `[config]` `ingame_movie_muting` setting, enabled by default in fresh configurations
+- Automatically lowers custom music volume during in-game phone calls and voice messages (`duck_music_on_calls`), with smooth asynchronous fading and configurable ducked volume level (`call_duck_volume_percent`)
 - Guards game-loop, package, and playback callbacks until BASS device initialization is complete and after audio shutdown
 - Keeps the original game files untouched while replacing or muting game music through the mod runtime
 
@@ -193,7 +194,7 @@ MP1 is a legacy compatibility format and is not a primary QA target. Prefer MP3,
 
 The full configuration reference is available in [CONFIGURATION.MD](CONFIGURATION.MD).
 
-Key supported settings include `frontend_volume`, `ingame_volume`, `shuffle_enabled`, `repeat_enabled`, `stop_music_on_loading_screens`, `ingame_movie_muting`, `language`, `log_level`, `toggle_overlay`, `pause_track`, `previous_track`, `skip_track`, `toggle_shuffle`, and `toggle_repeat`.
+Key supported settings include `frontend_volume`, `ingame_volume`, `shuffle_enabled`, `repeat_enabled`, `stop_music_on_loading_screens`, `ingame_movie_muting`, `pause_music_on_game_pause`, `duck_music_on_calls`, `call_duck_volume_percent`, `language`, `log_level`, `toggle_overlay`, `pause_track`, `previous_track`, `skip_track`, `toggle_shuffle`, and `toggle_repeat`.
 
 Use `None` or `Unbound` in the `[keys]` section to disable a binding manually. The new `toggle_shuffle` and `toggle_repeat` hotkeys default to `None` until you assign them.
 

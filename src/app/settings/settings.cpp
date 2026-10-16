@@ -142,6 +142,18 @@ namespace
 		return std::string("pause_music_on_game_pause = ") + (pause_music_on_game_pause ? "true" : "false");
 	}
 
+	// Formats the persisted phone call music ducking toggle line.
+	std::string build_duck_music_on_calls_line(const bool duck_music_on_calls)
+	{
+		return std::string("duck_music_on_calls = ") + (duck_music_on_calls ? "true" : "false");
+	}
+
+	// Formats the persisted phone call ducked volume percentage line.
+	std::string build_call_duck_volume_percent_line(const int percent)
+	{
+		return std::string("call_duck_volume_percent = \"") + std::to_string(percent) + "\"";
+	}
+
 	// Formats the persisted logger level line.
 	std::string build_log_level_line(const logger::level configured_level)
 	{
@@ -256,7 +268,7 @@ namespace
 	}
 
 	// Rebuilds the complete INI text from the current runtime state.
-	std::string build_config_text(const std::string& playlist, const int volume, const int frontend_volume, const int ingame_volume, const bool stop_music_on_loading_screens, const bool ingame_movie_muting, const bool pause_music_on_game_pause, const bool shuffle_enabled, const bool repeat_enabled, const logger::level configured_log_level)
+	std::string build_config_text(const std::string& playlist, const int volume, const int frontend_volume, const int ingame_volume, const bool stop_music_on_loading_screens, const bool ingame_movie_muting, const bool pause_music_on_game_pause, const bool duck_music_on_calls, const int call_duck_volume_percent, const bool shuffle_enabled, const bool repeat_enabled, const logger::level configured_log_level)
 	{
 		std::ostringstream output;
 		output << "[core]\n";
@@ -271,6 +283,8 @@ namespace
 		output << build_stop_music_on_loading_screens_line(stop_music_on_loading_screens) << "\n";
 		output << build_ingame_movie_muting_line(ingame_movie_muting) << "\n";
 		output << build_pause_music_on_game_pause_line(pause_music_on_game_pause) << "\n";
+		output << build_duck_music_on_calls_line(duck_music_on_calls) << "\n";
+		output << build_call_duck_volume_percent_line(call_duck_volume_percent) << "\n";
 		output << build_log_level_line(configured_log_level) << "\n";
 		output << "language = " << localization::code(localization::current()) << "\n\n";
 		output << "[keys]\n";
@@ -320,6 +334,8 @@ void settings::update()
 		const bool missing_stop_music_on_loading_screens = ini_get(config, "config", "stop_music_on_loading_screens") == nullptr;
 		const char* canonical_ingame_movie_muting_value = ini_get(config, "config", "ingame_movie_muting");
 		const bool missing_pause_music_on_game_pause = ini_get(config, "config", "pause_music_on_game_pause") == nullptr;
+		const bool missing_duck_music_on_calls = ini_get(config, "config", "duck_music_on_calls") == nullptr;
+		const bool missing_call_duck_volume_percent = ini_get(config, "config", "call_duck_volume_percent") == nullptr;
 		const bool old_ingame_movie_muting_present = ini_get(config, "experimental", "ingame_movie_muting") != nullptr;
 		const bool legacy_ingame_movie_muting_present = ini_get(config, "config", "experimental_ingame_movie_muting") != nullptr;
 		const bool old_experimental_section_present = ini_section_exists(settings::config_file, "experimental");
@@ -358,6 +374,8 @@ void settings::update()
 		audio::stop_music_on_loading_screens = settings::get_boolean(safe_ini_get(config, "config", "stop_music_on_loading_screens", "true"));
 		audio::ingame_movie_muting = settings::get_boolean(canonical_ingame_movie_muting_value ? canonical_ingame_movie_muting_value : "true");
 		audio::pause_music_on_game_pause = settings::get_boolean(safe_ini_get(config, "config", "pause_music_on_game_pause", "true"));
+		audio::duck_music_on_calls = settings::get_boolean(safe_ini_get(config, "config", "duck_music_on_calls", "true"));
+		audio::call_duck_volume_percent = std::clamp(std::stoi(safe_ini_get(config, "config", "call_duck_volume_percent", "25")), 0, 100);
 		input::reset_all_hotkeys();
 		for (const auto& binding : input::hotkey_bindings())
 		{
@@ -392,9 +410,9 @@ void settings::update()
 
 		settings::sync_trax_entries();
 
-		if (version_changed || missing_stop_music_on_loading_screens || missing_ingame_movie_muting || missing_pause_music_on_game_pause || old_ingame_movie_muting_present || old_experimental_section_present || legacy_ingame_movie_muting_present || missing_shuffle_enabled || missing_repeat_enabled || missing_language || invalid_language || missing_log_level || invalid_log_level || noncanonical_log_level || missing_frontend_volume || missing_ingame_volume || missing_hotkey_entry || invalid_hotkey_entry)
+		if (version_changed || missing_stop_music_on_loading_screens || missing_ingame_movie_muting || missing_pause_music_on_game_pause || missing_duck_music_on_calls || missing_call_duck_volume_percent || old_ingame_movie_muting_present || old_experimental_section_present || legacy_ingame_movie_muting_present || missing_shuffle_enabled || missing_repeat_enabled || missing_language || invalid_language || missing_log_level || invalid_log_level || noncanonical_log_level || missing_frontend_volume || missing_ingame_volume || missing_hotkey_entry || invalid_hotkey_entry)
 		{
-			fs::write(settings::config_file, build_config_text(audio::playlist_name, audio::volume, audio::frontend_volume, audio::ingame_volume, audio::stop_music_on_loading_screens, audio::ingame_movie_muting, audio::pause_music_on_game_pause, audio::shuffle_enabled, audio::repeat_enabled, logger::current_level_value()), false);
+			fs::write(settings::config_file, build_config_text(audio::playlist_name, audio::volume, audio::frontend_volume, audio::ingame_volume, audio::stop_music_on_loading_screens, audio::ingame_movie_muting, audio::pause_music_on_game_pause, audio::duck_music_on_calls, audio::call_duck_volume_percent, audio::shuffle_enabled, audio::repeat_enabled, logger::current_level_value()), false);
 			logger::log_debug("Configuration migration/rewrite completed");
 		}
 	}
@@ -423,7 +441,9 @@ void settings::update()
 		audio::stop_music_on_loading_screens = true;
 		audio::ingame_movie_muting = true;
 		audio::pause_music_on_game_pause = true;
-		fs::write(settings::config_file, build_config_text(audio::playlist_name, audio::volume, audio::frontend_volume, audio::ingame_volume, audio::stop_music_on_loading_screens, audio::ingame_movie_muting, audio::pause_music_on_game_pause, audio::shuffle_enabled, audio::repeat_enabled, logger::current_level_value()), false);
+		audio::duck_music_on_calls = true;
+		audio::call_duck_volume_percent = 25;
+		fs::write(settings::config_file, build_config_text(audio::playlist_name, audio::volume, audio::frontend_volume, audio::ingame_volume, audio::stop_music_on_loading_screens, audio::ingame_movie_muting, audio::pause_music_on_game_pause, audio::duck_music_on_calls, audio::call_duck_volume_percent, audio::shuffle_enabled, audio::repeat_enabled, logger::current_level_value()), false);
 		return;
 	}
 
@@ -438,6 +458,11 @@ bool settings::save_core_integer(const char* key, const int value)
 bool settings::save_config_boolean(const char* key, const bool value)
 {
 	return save_ini_value("config", key, value ? "true" : "false");
+}
+
+bool settings::save_config_integer(const char* key, const int value)
+{
+	return save_ini_value("config", key, std::to_string(value));
 }
 
 bool settings::save_language(const localization::language value)

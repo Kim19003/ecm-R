@@ -42,6 +42,8 @@ namespace bass_api
     DWORD channel_is_active(DWORD channel);
     /// Sets a raw BASS channel attribute on the active stream.
     bool channel_set_attribute(DWORD channel, DWORD attribute, float value);
+    /// Slides a channel attribute smoothly over a duration in milliseconds.
+    bool channel_slide_attribute(DWORD channel, DWORD attribute, float value, DWORD time);
     /// Frees a stream handle created for a playlist file.
     bool stream_free(DWORD channel);
     /// Starts or resumes the currently active BASS output.
@@ -52,6 +54,8 @@ namespace bass_api
     bool set_config(DWORD option, DWORD value);
     /// Sets the volume of a single BASS channel using a 0.0-1.0 range.
     bool set_channel_volume(DWORD channel, float volume);
+    /// Slides the volume of a single BASS channel smoothly over a duration in milliseconds.
+    bool slide_channel_volume(DWORD channel, float volume, DWORD time_ms);
     /// Applies the master stream volume using ECM-R's 0-100 range.
     bool set_stream_volume_config(std::int32_t volume);
     /// Opens a file-backed BASS stream for a playlist entry (UTF-8 path).

@@ -272,6 +272,20 @@ namespace
 		return false;
 	}
 
+	// Reports whether any FNG package associated with phone calls or voice messages is active.
+	bool is_call_package_loaded()
+	{
+		for (const char* package : audio::call_detection)
+		{
+			if (hook::IsPackageLoaded(package))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	// Reports whether an in-game pause menu package is currently active.
 	bool is_pause_menu_loaded()
 	{
@@ -316,6 +330,22 @@ namespace
 			{
 				audio::mute_detection.emplace_back("IG_PlayMovie.fng");
 			}
+			break;
+		}
+	}
+
+	// Rebuilds the list of FNG packages that trigger phone call music ducking.
+	void rebuild_call_detection()
+	{
+		audio::call_detection.clear();
+
+		switch (global::game)
+		{
+		case game_t::NFSU2:
+			audio::call_detection.emplace_back("UI_EngageMessageDialog.fng");
+			audio::call_detection.emplace_back("UI_SMS_Mailbox.fng");
+			audio::call_detection.emplace_back("UI_EngageMessage.fng");
+			audio::call_detection.emplace_back("EngageMessageDialog.fng");
 			break;
 		}
 	}
@@ -619,6 +649,7 @@ void audio::init()
 
 	logger::log_info("Audio initialization started");
 	rebuild_mute_detection();
+	rebuild_call_detection();
 
    if (!bass_api::load())
 	{
@@ -701,6 +732,8 @@ void audio::update()
 	{
 		audio::sync_game_pause();
 	}
+
+	audio::sync_call_ducking();
 
 	const bool loading_stop_active = audio::stop_music_on_loading_screens && is_loading_state();
 	if (loading_stop_active != last_loading_stop_active)
@@ -848,6 +881,40 @@ std::int32_t audio::current_context_volume()
 	}
 }
 
+std::int32_t audio::current_effective_volume()
+{
+	const std::int32_t base_volume = audio::current_context_volume();
+	if (audio::duck_music_on_calls && audio::is_call_ducked)
+	{
+		return std::clamp((base_volume * audio::call_duck_volume_percent) / 100, 0, 100);
+	}
+
+	return base_volume;
+}
+
+void audio::sync_call_ducking()
+{
+	if (!audio::is_ready() || audio::chan[0] == 0)
+	{
+		return;
+	}
+
+	const bool should_duck = audio::duck_music_on_calls && is_call_package_loaded();
+	if (should_duck != audio::is_call_ducked)
+	{
+		audio::is_call_ducked = should_duck;
+		logger::log_info(logger::va("Phone call music ducking %s",
+			should_duck ? "active (sliding volume down)" : "ended (sliding volume up)"));
+
+		const std::int32_t target_volume = audio::current_effective_volume();
+		const float target_vol_f = static_cast<float>(target_volume) / 100.0f;
+		const DWORD slide_ms = should_duck ? 200 : 400;
+
+		bass_api::slide_channel_volume(audio::chan[0], target_vol_f, slide_ms);
+		audio::applied_volume = target_volume;
+	}
+}
+
 void audio::apply_current_context_volume()
 {
 	if (!audio::is_ready() || audio::chan[0] == 0)
@@ -855,7 +922,7 @@ void audio::apply_current_context_volume()
 		return;
 	}
 
-	const std::int32_t volume = audio::current_context_volume();
+	const std::int32_t volume = audio::current_effective_volume();
 	if (audio::applied_volume == volume)
 	{
 		return;
@@ -1175,6 +1242,47 @@ void audio::set_pause_music_on_game_pause(const bool enabled)
 	audio::sync_game_pause();
 }
 
+void audio::set_duck_music_on_calls(const bool enabled)
+{
+	if (!audio::is_ready())
+	{
+		return;
+	}
+
+	if (audio::duck_music_on_calls == enabled)
+	{
+		return;
+	}
+
+	audio::duck_music_on_calls = enabled;
+	logger::log_info(enabled ? "Call music ducking enabled" : "Call music ducking disabled");
+	settings::save_config_boolean("duck_music_on_calls", audio::duck_music_on_calls);
+	audio::sync_call_ducking();
+	audio::apply_current_context_volume();
+}
+
+void audio::set_call_duck_volume_percent(const std::int32_t percent)
+{
+	if (!audio::is_ready())
+	{
+		return;
+	}
+
+	const std::int32_t clamped = std::clamp(percent, 0, 100);
+	if (audio::call_duck_volume_percent == clamped)
+	{
+		return;
+	}
+
+	audio::call_duck_volume_percent = clamped;
+	logger::log_info(logger::va("Call ducked volume percent set to %d%%", clamped));
+	settings::save_config_integer("call_duck_volume_percent", clamped);
+	if (audio::is_call_ducked)
+	{
+		audio::apply_current_context_volume();
+	}
+}
+
 void audio::request_current_chyron()
 {
 	if (!audio::is_ready())
@@ -1218,6 +1326,9 @@ std::int32_t audio::applied_volume = -1;
 bool audio::stop_music_on_loading_screens = true;
 bool audio::ingame_movie_muting = true;
 bool audio::pause_music_on_game_pause = true;
+bool audio::duck_music_on_calls = true;
+std::int32_t audio::call_duck_volume_percent = 25;
+bool audio::is_call_ducked = false;
 bool audio::shuffle_enabled = true;
 bool audio::repeat_enabled = true;
 bool audio::playlist_ended = false;
@@ -1237,3 +1348,4 @@ std::int32_t audio::playlist_context = -1;
 // MP1 is retained as a legacy MPEG-1 Layer I compatibility extension; new QA targets newer formats.
 std::initializer_list<std::string> audio::supported_files { "wav", "mp1", "mp2", "mp3", "ogg", "aif", "flac", "opus" };
 std::vector<const char*> audio::mute_detection;
+std::vector<const char*> audio::call_detection;

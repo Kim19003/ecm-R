@@ -15,6 +15,7 @@ namespace bass_api
         using init_fn = BOOL(WINAPI*)(int, DWORD, DWORD, HWND, void*);
         using channel_is_active_fn = DWORD(WINAPI*)(DWORD);
         using channel_set_attribute_fn = BOOL(WINAPI*)(DWORD, DWORD, float);
+        using channel_slide_attribute_fn = BOOL(WINAPI*)(DWORD, DWORD, float, DWORD);
         using stream_free_fn = BOOL(WINAPI*)(DWORD);
         using start_fn = BOOL(WINAPI*)();
         using pause_fn = BOOL(WINAPI*)();
@@ -25,12 +26,15 @@ namespace bass_api
         using error_get_code_fn = int(WINAPI*)();
         using plugin_load_fn = DWORD(WINAPI*)(const void*, DWORD);
         using plugin_free_fn = BOOL(WINAPI*)(DWORD);
+        using free_fn = BOOL(WINAPI*)();
+        using set_device_fn = BOOL(WINAPI*)(DWORD);
 
         HMODULE module_handle = nullptr;
         get_version_fn get_version_ptr = nullptr;
         init_fn init_ptr = nullptr;
         channel_is_active_fn channel_is_active_ptr = nullptr;
         channel_set_attribute_fn channel_set_attribute_ptr = nullptr;
+        channel_slide_attribute_fn channel_slide_attribute_ptr = nullptr;
         stream_free_fn stream_free_ptr = nullptr;
         start_fn start_ptr = nullptr;
         pause_fn pause_ptr = nullptr;
@@ -41,6 +45,9 @@ namespace bass_api
         error_get_code_fn error_get_code_ptr = nullptr;
         plugin_load_fn plugin_load_ptr = nullptr;
         plugin_free_fn plugin_free_ptr = nullptr;
+        free_fn free_ptr = nullptr;
+        set_device_fn set_device_ptr = nullptr;
+        bool device_owned = false;
         std::vector<plugin_handle_t> loaded_plugins;
         std::atomic_bool device_initialized{ false };
         std::string last_error_message;
@@ -89,22 +96,22 @@ namespace bass_api
 
         std::string get_module_directory()
         {
-            char module_path[MAX_PATH]{};
-            const DWORD length = GetModuleFileNameA(global::self, module_path, MAX_PATH);
+            wchar_t module_path[MAX_PATH]{};
+            const DWORD length = GetModuleFileNameW(global::self, module_path, MAX_PATH);
             if (length == 0 || length >= MAX_PATH)
             {
                 return std::string();
             }
 
-            std::string directory(module_path, length);
-            const auto separator = directory.find_last_of("\\/");
-            if (separator == std::string::npos)
+            std::wstring directory(module_path, length);
+            const auto separator = directory.find_last_of(L"\\/");
+            if (separator == std::wstring::npos)
             {
                 return std::string();
             }
 
             directory.erase(separator);
-            return directory;
+            return fs::wstring_to_utf8(directory);
         }
 
         void reset()
@@ -113,6 +120,7 @@ namespace bass_api
             init_ptr = nullptr;
             channel_is_active_ptr = nullptr;
             channel_set_attribute_ptr = nullptr;
+            channel_slide_attribute_ptr = nullptr;
             stream_free_ptr = nullptr;
             start_ptr = nullptr;
             pause_ptr = nullptr;
@@ -123,6 +131,9 @@ namespace bass_api
             error_get_code_ptr = nullptr;
             plugin_load_ptr = nullptr;
             plugin_free_ptr = nullptr;
+            free_ptr = nullptr;
+            set_device_ptr = nullptr;
+            device_owned = false;
         }
 
         void unload_plugins()
@@ -159,7 +170,8 @@ namespace bass_api
                     ? std::string(plugin_name)
                     : module_directory + "\\" + plugin_name;
 
-                const DWORD attr = GetFileAttributesA(plugin_path.c_str());
+                const std::wstring wide_plugin_path = fs::utf8_to_wstring(plugin_path);
+                const DWORD attr = GetFileAttributesW(wide_plugin_path.c_str());
                 if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY))
                 {
                     logger::log_debug(logger::va("Optional BASS add-on '%s' not present", plugin_name));
@@ -208,14 +220,15 @@ namespace bass_api
         const std::string bass_path = module_directory.empty()
             ? std::string("bass.dll")
             : module_directory + "\\bass.dll";
-		logger::log_debug(logger::va("Loading BASS from '%s'", fs::ansi_to_utf8(bass_path).c_str()));
+        const std::wstring wide_bass_path = fs::utf8_to_wstring(bass_path);
+		logger::log_debug(logger::va("Loading BASS from '%s'", bass_path.c_str()));
 
-        module_handle = LoadLibraryA(bass_path.c_str());
+        module_handle = LoadLibraryW(wide_bass_path.c_str());
         if (module_handle == nullptr)
         {
             const DWORD error = GetLastError();
             reset();
-            last_error_message = logger::va("%s\nTried path: %s", format_system_error(error).c_str(), fs::ansi_to_utf8(bass_path).c_str());
+            last_error_message = logger::va("%s\nTried path: %s", format_system_error(error).c_str(), bass_path.c_str());
 			logger::log_error(logger::va("BASS load failed: %s", last_error_message.c_str()));
             return false;
         }
@@ -240,9 +253,12 @@ namespace bass_api
 
         logger::log_debug("BASS exports resolved");
 
-        // Resolve optional add-on plugin exports
+        // Resolve optional add-on plugin, sliding, free, and set-device exports
         resolve(plugin_load_ptr, "BASS_PluginLoad");
         resolve(plugin_free_ptr, "BASS_PluginFree");
+        resolve(channel_slide_attribute_ptr, "BASS_ChannelSlideAttribute");
+        resolve(free_ptr, "BASS_Free");
+        resolve(set_device_ptr, "BASS_SetDevice");
 
         return true;
     }
@@ -251,6 +267,11 @@ namespace bass_api
     {
         unload_plugins();
         device_initialized.store(false, std::memory_order_release);
+        if (device_owned && free_ptr != nullptr)
+        {
+            free_ptr();
+            device_owned = false;
+        }
         reset();
         if (module_handle != nullptr)
         {
@@ -287,12 +308,27 @@ namespace bass_api
     bool init_device(HWND hwnd)
     {
         device_initialized.store(false, std::memory_order_release);
+        device_owned = false;
         if (global::shutdown.load(std::memory_order_acquire) || init_ptr == nullptr)
         {
             return false;
         }
 
-        const bool initialized = init_ptr(-1, 44100, 0, hwnd, nullptr) != FALSE;
+        bool initialized = init_ptr(-1, 44100, 0, hwnd, nullptr) != FALSE;
+        if (initialized)
+        {
+            device_owned = true;
+        }
+        else if (error_get_code_ptr != nullptr && error_get_code_ptr() == 14 /* BASS_ERROR_ALREADY */)
+        {
+            logger::log_info("BASS output device is already initialized; sharing existing device context");
+            if (set_device_ptr != nullptr)
+            {
+                set_device_ptr(static_cast<DWORD>(-1));
+            }
+            initialized = true;
+        }
+
         if (initialized && !global::shutdown.load(std::memory_order_acquire))
         {
             device_initialized.store(true, std::memory_order_release);
@@ -315,6 +351,21 @@ namespace bass_api
     bool channel_set_attribute(DWORD channel, DWORD attribute, float value)
     {
         return can_use_device() && channel_set_attribute_ptr != nullptr && channel_set_attribute_ptr(channel, attribute, value) != FALSE;
+    }
+
+    bool channel_slide_attribute(DWORD channel, DWORD attribute, float value, DWORD time)
+    {
+        if (!can_use_device())
+        {
+            return false;
+        }
+
+        if (channel_slide_attribute_ptr != nullptr)
+        {
+            return channel_slide_attribute_ptr(channel, attribute, value, time) != FALSE;
+        }
+
+        return channel_set_attribute(channel, attribute, value);
     }
 
     bool stream_free(DWORD channel)
@@ -340,6 +391,11 @@ namespace bass_api
     bool set_channel_volume(DWORD channel, float volume)
     {
         return channel_set_attribute(channel, attrib_vol, volume);
+    }
+
+    bool slide_channel_volume(DWORD channel, float volume, DWORD time_ms)
+    {
+        return channel_slide_attribute(channel, attrib_vol, volume, time_ms);
     }
 
     bool set_stream_volume_config(std::int32_t volume)
@@ -382,7 +438,7 @@ namespace bass_api
 
     plugin_handle_t plugin_load(const char* file)
     {
-        if (!can_use_device() || plugin_load_ptr == nullptr || file == nullptr)
+        if (plugin_load_ptr == nullptr || file == nullptr)
         {
             return 0;
         }

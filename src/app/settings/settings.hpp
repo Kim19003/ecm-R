@@ -20,6 +20,8 @@ public:
 	static bool save_core_integer(const char* key, int value);
 	/// Saves a boolean value inside the [config] section.
 	static bool save_config_boolean(const char* key, bool value);
+	/// Saves an integer value inside the [config] section.
+	static bool save_config_integer(const char* key, int value);
 	/// Saves the active overlay language inside the [config] section.
 	static bool save_language(localization::language value);
 	/// Saves one hotkey binding inside the [keys] section.

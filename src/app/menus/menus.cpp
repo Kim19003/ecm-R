@@ -867,6 +867,23 @@ void menus::actions()
 		{
 			audio::set_pause_music_on_game_pause(pause_music_on_game_pause);
 		}
+
+		bool duck_music_on_calls = audio::duck_music_on_calls;
+		const std::string duck_calls_label = std::string(localization::text("actions.duck_music_on_calls")) + "##duck_music_on_calls";
+		if (ImGui::Checkbox(duck_calls_label.c_str(), &duck_music_on_calls))
+		{
+			audio::set_duck_music_on_calls(duck_music_on_calls);
+		}
+
+		if (audio::duck_music_on_calls)
+		{
+			std::int32_t duck_percent = audio::call_duck_volume_percent;
+			const std::string duck_percent_label = std::string(localization::text("actions.call_duck_volume_percent")) + "##call_duck_volume_percent";
+			if (ImGui::SliderInt(duck_percent_label.c_str(), &duck_percent, 0, 100, "%d%%"))
+			{
+				audio::set_call_duck_volume_percent(duck_percent);
+			}
+		}
 		ImGui::Separator();
 
 		ImGui::Text("%s", localization::format("actions.mode", {{ "mode", localization::text(audio::shuffle_enabled ? "actions.random" : "actions.sequential") }}).c_str());

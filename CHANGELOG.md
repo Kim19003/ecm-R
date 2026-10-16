@@ -7,6 +7,7 @@ This changelog tracks the tagged releases recorded in this repository.
 ## [Unreleased]
 
 ### Added
+- Added automatic music volume ducking during in-game phone calls and voice messages (`UI_EngageMessageDialog.fng`, `UI_SMS_Mailbox.fng`, etc.) with smooth asynchronous fading via `BASS_ChannelSlideAttribute`, configurable via `[config] duck_music_on_calls` (enabled by default) and `[config] call_duck_volume_percent` (default 25%) with in-game overlay controls.
 - Added modern codec support for FLAC (`.flac`) and Opus (`.opus`) audio files via dynamic loading of optional `bassflac.dll` and `bassopus.dll` add-ons, with Vorbis Comments and ID3 metadata tag resolution.
 - Added automatic Korean Hangul romanization (Revised Romanization of Korean) for the in-game chyron notification, converting Korean song titles and artists to Latin script so they render cleanly in NFSU2's in-game font instead of showing unmappable '?' question marks.
 - Added configurable in-game pause menu music pausing via `[config] pause_music_on_game_pause` (enabled by default), suspending playback while in-game pause menus and dialogs are active and resuming seamlessly from the exact same position upon unpausing.
@@ -19,6 +20,7 @@ This changelog tracks the tagged releases recorded in this repository.
 - Clarified the OpenSpec planner workflow for workflow-only changes: scaffold with `openspec new change "<name>"` without `--skip-specs`, then set `skip_specs: true` in the CLI-resolved `.openspec.yaml` before status-driven artifact capture. Compared with target `main`, this corrects the in-progress workflow integration rather than a released ECM-R runtime regression.
 
 ### Fixed
+- Fixed BASS device initialization failure (error 14 / `BASS_ERROR_ALREADY`) when an audio output device is already initialized in the game process, sharing the active device context and ensuring codec plugins (`bassopus.dll`, `bassflac.dll`) load properly.
 - Fixed ID3v2 and ID3v1 tag parsing mangling UTF-8 text into ISO-8859-1 Mojibake when frames specify encoding byte `0x00` (standard in ID3v2.3 tags storing UTF-8 payloads).
 
 ## [v0.6.0-alpha] - 2026-08-31
