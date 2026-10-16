@@ -138,8 +138,8 @@ Key deployment constraints:
 - `ecm-r.x86.asi` is the loader-facing runtime artifact.
 - `ecm-r.x86.ini` is created automatically if missing.
 - `ecm-r/ecm-r.x86.log` is created alongside the translation bundles; its active size is capped at 2 MiB and rotation retains at most `ecm-r/ecm-r.x86.log.1`. The logger creates `ecm-r/` when missing, validates an existing path as a directory, and does not migrate older root-level logs.
-- `bass.dll` is not bundled by the repository and must be obtained from the official BASS distribution. ECM-R has no static BASS SDK or SDK-header dependency; no BASS binaries are committed, and third-party redistributions are not accepted.
-- ECM-R loads `bass.dll` dynamically from the same directory as the plugin module.
+- `bass.dll` is not bundled by the repository and must be obtained from the official BASS distribution. ECM-R has no static BASS SDK or SDK-header dependency; no BASS binaries are committed, and third-party redistributions are not accepted. Only the 32-bit (Win-x86) builds of `bass.dll` and its optional add-ons (`bassflac.dll`, `bassopus.dll`) are compatible, as NFSU2 and ECM-R are 32-bit binaries.
+- ECM-R loads `bass.dll` and any present 32-bit add-on libraries dynamically from the same directory as the plugin module.
 - The active build target for NFSU2 is `Release | Win-x86`.
 - Editable overlay translations are deployed as UTF-8 `ecm-r/translations/en.ini` and `ecm-r/translations/es.ini` beside the plugin.
 - The runtime-facing startup guidance and the maintained documentation both assume deployment next to `ecm-r.x86.asi`.
@@ -323,9 +323,11 @@ Supported file extensions currently documented in the repository are:
 - `.mp2`
 - `.mp3`
 - `.ogg` (core BASS Ogg Vorbis)
-- `.flac` (requires optional `bassflac.dll` add-on beside `bass.dll`)
-- `.opus` (requires optional `bassopus.dll` add-on beside `bass.dll`)
+- `.flac` (requires optional 32-bit `bassflac.dll` add-on beside `bass.dll`)
+- `.opus` (requires optional 32-bit `bassopus.dll` add-on beside `bass.dll`)
 - `.aif`
+
+Playlists support freely mixing different audio file formats simultaneously in the same playlist folder. Container format and metadata parsing are resolved per file independently.
 
 ### Track context filtering
 

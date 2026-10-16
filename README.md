@@ -100,13 +100,17 @@ Game Folder/
 ```
 
 ECM-R loads the official BASS runtime dynamically, so `bass.dll` must be present next to the ECM-R runtime files.
-Download the official Windows 32-bit BASS ZIP package from the `BASS` page on https://www.un4seen.com/ and copy `bass.dll` from the root of that ZIP.
+Download the official **Windows 32-bit (x86)** BASS ZIP package from the `BASS` page on https://www.un4seen.com/ and copy `bass.dll` from the root of that ZIP.
+
+> [!NOTE]
+> For FLAC (`.flac`) and Opus (`.opus`) playback, download the **Windows 32-bit (x86)** versions of `BASSFLAC` and `BASSOPUS` from https://www.un4seen.com/ and place `bassflac.dll` and `bassopus.dll` directly next to `bass.dll`.
+> **Do not use 64-bit (x64) BASS binaries**: NFSU2 (`SPEED2.EXE`) and ECM-R are 32-bit (x86) applications; attempting to load 64-bit DLLs into a 32-bit process will fail with `ERROR_BAD_EXE_FORMAT` (error 193).
 
 ## Installation
 
 Before installing, ensure you have:
 
-1. Downloaded the official Windows 32-bit BASS ZIP package from the `BASS` page on https://www.un4seen.com/ and copied `bass.dll` from the root of that ZIP
+1. Downloaded the official Windows 32-bit BASS ZIP package from the `BASS` page on https://www.un4seen.com/ and copied `bass.dll` from the root of that ZIP (plus optional 32-bit `bassflac.dll` and `bassopus.dll` if using FLAC or Opus)
 2. Obtained the ECM-R runtime files:
    - `ecm-r.x86.asi`
    - `ecm-r.x86.ini` (created automatically on first launch if missing)
@@ -127,9 +131,11 @@ ECM-R currently scans the playlist folder for these file types:
 - `.mp2`
 - `.mp3`
 - `.ogg` (core BASS Ogg Vorbis)
-- `.flac` (requires optional `bassflac.dll` add-on beside `bass.dll`)
-- `.opus` (requires optional `bassopus.dll` add-on beside `bass.dll`)
+- `.flac` (requires optional 32-bit `bassflac.dll` add-on beside `bass.dll`)
+- `.opus` (requires optional 32-bit `bassopus.dll` add-on beside `bass.dll`)
 - `.aif`
+
+Playlists can freely mix different audio formats simultaneously (for example, `.mp3`, `.flac`, and `.opus` tracks together in the same `Music` folder). ECM-R identifies container types and resolves metadata for each file individually at runtime.
 
 MP1 is a legacy compatibility format and is not a primary QA target. Prefer MP3, OGG Vorbis, FLAC, OPUS, WAV, or AIFF for new music and testing.
 
