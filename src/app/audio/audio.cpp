@@ -5,6 +5,7 @@
 #include "bass_api.hpp"
 #include "player.hpp"
 #include "fs/fs.hpp"
+#include "korean/korean.hpp"
 #include "hook/hook.hpp"
 #include "settings/settings.hpp"
 #include "localization/localization.hpp"
@@ -202,6 +203,10 @@ namespace
 		// NFSU2's chyron has limited visual space; long embedded tags from user files
 		// can overflow or cause rendering glitches. Truncation goes through wstring
 		// to avoid splitting multi-byte UTF-8 sequences mid-character.
+		// NFSU2's in-game font only supports ANSI/Latin characters; Korean Hangul text
+		// is romanized using Revised Romanization so titles and artists render legibly
+		// instead of displaying unmappable '?' characters. Original metadata remains
+		// intact in audio::currently_playing.
 		// Upgrade path: configurable max.
 		constexpr std::size_t max_chyron = 64;
 		auto truncate_for_chyron = [max_chyron](const std::string& src) -> std::string
@@ -215,8 +220,10 @@ namespace
 				w.resize(max_chyron);
 			return fs::wstring_to_utf8(w);
 		};
-		std::string safe_title  = truncate_for_chyron(audio::currently_playing.title);
-		std::string safe_artist = truncate_for_chyron(audio::currently_playing.artist);
+		std::string chyron_title  = korean::romanize(audio::currently_playing.title);
+		std::string chyron_artist = korean::romanize(audio::currently_playing.artist);
+		std::string safe_title    = truncate_for_chyron(chyron_title);
+		std::string safe_artist   = truncate_for_chyron(chyron_artist);
 
 		if (!hook::SummonChyron(fs::utf8_to_ansi(safe_title).c_str(), fs::utf8_to_ansi(safe_artist).c_str(), audio::currently_playing.where.c_str()))
 		{
