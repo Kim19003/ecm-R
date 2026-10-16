@@ -7,6 +7,7 @@ This changelog tracks the tagged releases recorded in this repository.
 ## [Unreleased]
 
 ### Added
+- Added modern codec support for FLAC (`.flac`) and Opus (`.opus`) audio files via dynamic loading of optional `bassflac.dll` and `bassopus.dll` add-ons, with Vorbis Comments and ID3 metadata tag resolution.
 - Added automatic Korean Hangul romanization (Revised Romanization of Korean) for the in-game chyron notification, converting Korean song titles and artists to Latin script so they render cleanly in NFSU2's in-game font instead of showing unmappable '?' question marks.
 - Added configurable in-game pause menu music pausing via `[config] pause_music_on_game_pause` (enabled by default), suspending playback while in-game pause menus and dialogs are active and resuming seamlessly from the exact same position upon unpausing.
 - Added a root-level [contributor guide](CONTRIBUTING.md) covering repository policy, NFSU2/Win-x86 development, OpenSpec workflow, runtime safety, validation, and compatibility boundaries.

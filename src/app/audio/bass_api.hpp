@@ -8,6 +8,7 @@
 namespace bass_api
 {
     using stream_handle_t = DWORD;
+    using plugin_handle_t = DWORD;
 
     inline constexpr DWORD version = 0x204;
     inline constexpr DWORD active_stopped = 0;
@@ -59,4 +60,8 @@ namespace bass_api
     bool channel_play(DWORD channel, bool restart);
     /// Returns raw tag data for the given tag type, or nullptr if unavailable.
     const void* channel_get_tags(stream_handle_t handle, DWORD tag_type);
+    /// Loads an optional BASS plugin add-on (e.g., bassflac.dll, bassopus.dll).
+    plugin_handle_t plugin_load(const char* file);
+    /// Frees a previously loaded BASS plugin handle.
+    bool plugin_free(plugin_handle_t handle);
 }

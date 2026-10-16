@@ -5,6 +5,7 @@
 #include "logger/logger.hpp"
 
 #include <atomic>
+#include <vector>
 
 namespace bass_api
 {
@@ -22,6 +23,8 @@ namespace bass_api
         using channel_play_fn = BOOL(WINAPI*)(DWORD, BOOL);
         using channel_get_tags_fn = const void*(WINAPI*)(DWORD, DWORD);
         using error_get_code_fn = int(WINAPI*)();
+        using plugin_load_fn = DWORD(WINAPI*)(const void*, DWORD);
+        using plugin_free_fn = BOOL(WINAPI*)(DWORD);
 
         HMODULE module_handle = nullptr;
         get_version_fn get_version_ptr = nullptr;
@@ -36,6 +39,9 @@ namespace bass_api
         channel_play_fn channel_play_ptr = nullptr;
         channel_get_tags_fn channel_get_tags_ptr = nullptr;
         error_get_code_fn error_get_code_ptr = nullptr;
+        plugin_load_fn plugin_load_ptr = nullptr;
+        plugin_free_fn plugin_free_ptr = nullptr;
+        std::vector<plugin_handle_t> loaded_plugins;
         std::atomic_bool device_initialized{ false };
         std::string last_error_message;
 
@@ -115,6 +121,63 @@ namespace bass_api
             channel_play_ptr = nullptr;
             channel_get_tags_ptr = nullptr;
             error_get_code_ptr = nullptr;
+            plugin_load_ptr = nullptr;
+            plugin_free_ptr = nullptr;
+        }
+
+        void unload_plugins()
+        {
+            if (plugin_free_ptr != nullptr)
+            {
+                for (const auto handle : loaded_plugins)
+                {
+                    if (handle != 0)
+                    {
+                        plugin_free_ptr(handle);
+                    }
+                }
+            }
+            loaded_plugins.clear();
+        }
+
+        void load_plugins()
+        {
+            if (plugin_load_ptr == nullptr)
+            {
+                return;
+            }
+
+            const std::string module_directory = get_module_directory();
+            static const char* const candidate_plugins[] = {
+                "bassflac.dll",
+                "bassopus.dll"
+            };
+
+            for (const char* const plugin_name : candidate_plugins)
+            {
+                const std::string plugin_path = module_directory.empty()
+                    ? std::string(plugin_name)
+                    : module_directory + "\\" + plugin_name;
+
+                const DWORD attr = GetFileAttributesA(plugin_path.c_str());
+                if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY))
+                {
+                    logger::log_debug(logger::va("Optional BASS add-on '%s' not present", plugin_name));
+                    continue;
+                }
+
+                const plugin_handle_t handle = plugin_load(plugin_path.c_str());
+                if (handle != 0)
+                {
+                    loaded_plugins.push_back(handle);
+                    logger::log_info(logger::va("BASS plugin loaded: %s", plugin_name));
+                }
+                else
+                {
+                    const int err = error_get_code_ptr != nullptr ? error_get_code_ptr() : -1;
+                    logger::log_warning(logger::va("Failed to load BASS plugin '%s' (error %d)", plugin_name, err));
+                }
+            }
         }
 
         template <typename T>
@@ -175,12 +238,18 @@ namespace bass_api
             return false;
         }
 
-		logger::log_debug("BASS exports resolved");
+        logger::log_debug("BASS exports resolved");
+
+        // Resolve optional add-on plugin exports
+        resolve(plugin_load_ptr, "BASS_PluginLoad");
+        resolve(plugin_free_ptr, "BASS_PluginFree");
+
         return true;
     }
 
     void unload()
     {
+        unload_plugins();
         device_initialized.store(false, std::memory_order_release);
         reset();
         if (module_handle != nullptr)
@@ -227,6 +296,7 @@ namespace bass_api
         if (initialized && !global::shutdown.load(std::memory_order_acquire))
         {
             device_initialized.store(true, std::memory_order_release);
+            load_plugins();
         }
 
         return initialized && !global::shutdown.load(std::memory_order_acquire);
@@ -308,5 +378,37 @@ namespace bass_api
     {
         if (!can_use_device() || channel_get_tags_ptr == nullptr) return nullptr;
         return channel_get_tags_ptr(handle, tag_type);
+    }
+
+    plugin_handle_t plugin_load(const char* file)
+    {
+        if (!can_use_device() || plugin_load_ptr == nullptr || file == nullptr)
+        {
+            return 0;
+        }
+
+        const int wide_len = MultiByteToWideChar(CP_UTF8, 0, file, -1, nullptr, 0);
+        if (wide_len <= 0)
+        {
+            return 0;
+        }
+
+        std::wstring wfile(static_cast<size_t>(wide_len), L'\0');
+        if (MultiByteToWideChar(CP_UTF8, 0, file, -1, wfile.data(), wide_len) != wide_len)
+        {
+            return 0;
+        }
+
+        return plugin_load_ptr(wfile.c_str(), bass_unicode);
+    }
+
+    bool plugin_free(plugin_handle_t handle)
+    {
+        if (plugin_free_ptr == nullptr)
+        {
+            return false;
+        }
+
+        return plugin_free_ptr(handle) != FALSE;
     }
 }
