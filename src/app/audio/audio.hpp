@@ -49,6 +49,8 @@ public:
 	static bool is_track_playable(const std::string& file);
 	/// Resolves the effective volume for the current frontend or in-game context.
    static std::int32_t current_context_volume();
+	/// Resolves the live effective volume, applying phone call ducking if active.
+	static std::int32_t current_effective_volume();
 	/// Pushes the context-aware volume setting to the live BASS configuration.
 	static void apply_current_context_volume();
 	/// Moves to the next track in the current order, honoring shuffle and repeat.
@@ -71,6 +73,12 @@ public:
 	static void set_ingame_movie_muting(bool enabled);
 	/// Enables or disables music pausing while the in-game pause menu is active.
 	static void set_pause_music_on_game_pause(bool enabled);
+	/// Enables or disables lowering music volume during in-game phone calls and voice messages.
+	static void set_duck_music_on_calls(bool enabled);
+	/// Sets the ducked volume percentage applied during phone calls.
+	static void set_call_duck_volume_percent(std::int32_t percent);
+	/// Reconciles music volume ducking with active phone call and message packages.
+	static void sync_call_ducking();
 	/// Returns whether the current track still has a resumable BASS stream.
 	static bool can_resume_current_song();
 	/// Applies a game or manual pause to the active track and hides the chyron.
@@ -97,6 +105,7 @@ public:
 	static std::int32_t playlist_context;
 
 	static std::vector<const char*> mute_detection;
+	static std::vector<const char*> call_detection;
 
 	static std::initializer_list<std::string> supported_files;
 
@@ -114,6 +123,9 @@ public:
 	static bool stop_music_on_loading_screens;
 	static bool ingame_movie_muting;
 	static bool pause_music_on_game_pause;
+	static bool duck_music_on_calls;
+	static std::int32_t call_duck_volume_percent;
+	static bool is_call_ducked;
 	static bool shuffle_enabled;
 	static bool repeat_enabled;
 	static bool playlist_ended;

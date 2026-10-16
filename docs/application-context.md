@@ -401,7 +401,7 @@ Consequences:
 
 This means playback does not immediately start just because BASS is available. Normal playback depends on later resume conditions from the game integration.
 
-### Loading screens, movie-related muting, and pause-menu pausing
+### Loading screens, movie-related muting, pause-menu pausing, and phone call volume ducking
 
 The current NFSU2 mute-detection list includes these packages:
 
@@ -418,6 +418,8 @@ The NFSU2 reverse-engineering references document `IG_PlayMovie.fng` as the in-g
 ECM-R controls that package with the normal `[config]` `ingame_movie_muting` setting. When enabled, `IG_PlayMovie.fng` is added to `audio::mute_detection` and the runtime reconciles pause state against loaded packages. Fresh configurations enable it by default. When disabled, ECM-R keeps the legacy package-hook behavior and does not treat `IG_PlayMovie.fng` as a mute trigger.
 
 Similarly, in-game pause menu muting is controlled by `[config] pause_music_on_game_pause`. When enabled (default: `true`), the runtime checks whether in-game pause packages (`UI_Pause.fng`, `UI_PauseOptionsMain.fng`, `UI_PauseOptions.fng`, `UI_InGameDialog.fng`, `PauseMain.fng`, `FePauseMain.fng`) are active while in `GameFlowState::Racing` and pauses playback, resuming seamlessly from the current position once unpaused.
+
+Phone call audio ducking is controlled by `[config] duck_music_on_calls` (default: `true`) and `[config] call_duck_volume_percent` (default: `25`). In vanilla NFSU2, phone calls and voice messages play speech audio streams (`UG2_Speech.big`), but vanilla music ducking only affects the game's internal music (which ECM-R silences). ECM-R monitors phone call and voice message UI packages (`UI_EngageMessageDialog.fng`, `UI_SMS_Mailbox.fng`, `UI_EngageMessage.fng`, `EngageMessageDialog.fng`) and reconciles volume ducking dynamically via `audio::sync_call_ducking()`. When a phone call or message dialog is active, ECM-R uses `BASS_ChannelSlideAttribute` to asynchronously fade music volume down to the configured percentage over 200 ms. When the call or message dialog closes, volume slides smoothly back up to normal context volume over 400 ms. Both the toggle and ducked volume percentage are adjustable in real time from the Actions overlay menu.
 
 ### Metadata and chyron text
 

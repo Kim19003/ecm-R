@@ -66,7 +66,7 @@ Game Folder/
       Artist - Song 02.ogg
 ```
 
-`.ogg` support targets core BASS Ogg Vorbis. Ogg Opus and Ogg FLAC require separate BASS add-ons and are not supported by the current runtime.
+`.ogg` support targets core BASS Ogg Vorbis. FLAC (`.flac`) and Opus (`.opus`) are supported when the optional 32-bit `bassflac.dll` and `bassopus.dll` add-on libraries are placed in the `scripts/` folder beside `bass.dll`. You can freely mix MP3, OGG, FLAC, and Opus tracks within the same playlist folder.
 
 ### `volume`
 - **Description:** Legacy/fallback volume setting.
@@ -118,6 +118,17 @@ Game Folder/
 - **Description:** Suspends custom music while the in-game pause menu or confirmation dialog is active.
 - **Default:** `true` for fresh configurations.
 - **Behavior:** When set to `true`, opening the in-game pause menu (`UI_Pause.fng`, `UI_PauseOptionsMain.fng`, `UI_InGameDialog.fng`) while racing or exploring the open world pauses music playback. Playback resumes seamlessly from the exact same position upon unpausing the game. When `false`, music plays uninterrupted across pause menus.
+
+### `duck_music_on_calls`
+- **Description:** Automatically lowers music volume when in-game phone calls or voice messages occur.
+- **Default:** `true` for fresh configurations.
+- **Behavior:** When set to `true`, ECM-R monitors phone call and message packages (`UI_EngageMessageDialog.fng`, `UI_SMS_Mailbox.fng`, etc.). While a call or voice message is active, ECM-R smoothly slides the music volume down over 200 ms. When the call or mailbox closes, the volume slides smoothly back up to normal context volume over 400 ms. When `false`, music volume is unaffected by phone calls.
+
+### `call_duck_volume_percent`
+- **Description:** Percentage of the active context volume to apply when music ducking is triggered.
+- **Default:** `25`
+- **Range:** `0` to `100`
+- **Behavior:** Configures the ducked playback volume level as a percentage of the normal context volume. For example, if in-game volume is 80 and the duck percentage is 25%, music smoothly slides to 20% volume while a call is active. Setting this to 0 completely silences custom music during calls.
 
 ### `language`
 - **Description:** Selects the overlay language.

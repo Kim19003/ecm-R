@@ -7,6 +7,7 @@ This changelog tracks the tagged releases recorded in this repository.
 ## [Unreleased]
 
 ### Added
+- Added automatic music volume ducking during in-game phone calls and voice messages (`UI_EngageMessageDialog.fng`, `UI_SMS_Mailbox.fng`, etc.) with smooth asynchronous fading via `BASS_ChannelSlideAttribute`, configurable via `[config] duck_music_on_calls` (enabled by default) and `[config] call_duck_volume_percent` (default 25%) with in-game overlay controls.
 - Added modern codec support for FLAC (`.flac`) and Opus (`.opus`) audio files via dynamic loading of optional `bassflac.dll` and `bassopus.dll` add-ons, with Vorbis Comments and ID3 metadata tag resolution.
 - Added configurable in-game pause menu music pausing via `[config] pause_music_on_game_pause` (enabled by default), suspending playback while in-game pause menus and dialogs are active and resuming seamlessly from the exact same position upon unpausing.
 - Added a root-level [contributor guide](CONTRIBUTING.md) covering repository policy, NFSU2/Win-x86 development, OpenSpec workflow, runtime safety, validation, and compatibility boundaries.

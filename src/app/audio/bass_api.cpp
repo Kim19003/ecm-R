@@ -15,6 +15,7 @@ namespace bass_api
         using init_fn = BOOL(WINAPI*)(int, DWORD, DWORD, HWND, void*);
         using channel_is_active_fn = DWORD(WINAPI*)(DWORD);
         using channel_set_attribute_fn = BOOL(WINAPI*)(DWORD, DWORD, float);
+        using channel_slide_attribute_fn = BOOL(WINAPI*)(DWORD, DWORD, float, DWORD);
         using stream_free_fn = BOOL(WINAPI*)(DWORD);
         using start_fn = BOOL(WINAPI*)();
         using pause_fn = BOOL(WINAPI*)();
@@ -31,6 +32,7 @@ namespace bass_api
         init_fn init_ptr = nullptr;
         channel_is_active_fn channel_is_active_ptr = nullptr;
         channel_set_attribute_fn channel_set_attribute_ptr = nullptr;
+        channel_slide_attribute_fn channel_slide_attribute_ptr = nullptr;
         stream_free_fn stream_free_ptr = nullptr;
         start_fn start_ptr = nullptr;
         pause_fn pause_ptr = nullptr;
@@ -113,6 +115,7 @@ namespace bass_api
             init_ptr = nullptr;
             channel_is_active_ptr = nullptr;
             channel_set_attribute_ptr = nullptr;
+            channel_slide_attribute_ptr = nullptr;
             stream_free_ptr = nullptr;
             start_ptr = nullptr;
             pause_ptr = nullptr;
@@ -240,9 +243,10 @@ namespace bass_api
 
         logger::log_debug("BASS exports resolved");
 
-        // Resolve optional add-on plugin exports
+        // Resolve optional add-on plugin and sliding exports
         resolve(plugin_load_ptr, "BASS_PluginLoad");
         resolve(plugin_free_ptr, "BASS_PluginFree");
+        resolve(channel_slide_attribute_ptr, "BASS_ChannelSlideAttribute");
 
         return true;
     }
@@ -317,6 +321,21 @@ namespace bass_api
         return can_use_device() && channel_set_attribute_ptr != nullptr && channel_set_attribute_ptr(channel, attribute, value) != FALSE;
     }
 
+    bool channel_slide_attribute(DWORD channel, DWORD attribute, float value, DWORD time)
+    {
+        if (!can_use_device())
+        {
+            return false;
+        }
+
+        if (channel_slide_attribute_ptr != nullptr)
+        {
+            return channel_slide_attribute_ptr(channel, attribute, value, time) != FALSE;
+        }
+
+        return channel_set_attribute(channel, attribute, value);
+    }
+
     bool stream_free(DWORD channel)
     {
         return can_use_device() && stream_free_ptr != nullptr && stream_free_ptr(channel) != FALSE;
@@ -340,6 +359,11 @@ namespace bass_api
     bool set_channel_volume(DWORD channel, float volume)
     {
         return channel_set_attribute(channel, attrib_vol, volume);
+    }
+
+    bool slide_channel_volume(DWORD channel, float volume, DWORD time_ms)
+    {
+        return channel_slide_attribute(channel, attrib_vol, volume, time_ms);
     }
 
     bool set_stream_volume_config(std::int32_t volume)
