@@ -28,6 +28,7 @@ namespace bass_api
         using plugin_free_fn = BOOL(WINAPI*)(DWORD);
         using free_fn = BOOL(WINAPI*)();
         using set_device_fn = BOOL(WINAPI*)(DWORD);
+        using get_device_fn = DWORD(WINAPI*)();
 
         HMODULE module_handle = nullptr;
         get_version_fn get_version_ptr = nullptr;
@@ -47,6 +48,7 @@ namespace bass_api
         plugin_free_fn plugin_free_ptr = nullptr;
         free_fn free_ptr = nullptr;
         set_device_fn set_device_ptr = nullptr;
+        get_device_fn get_device_ptr = nullptr;
         bool device_owned = false;
         std::vector<plugin_handle_t> loaded_plugins;
         std::atomic_bool device_initialized{ false };
@@ -133,6 +135,7 @@ namespace bass_api
             plugin_free_ptr = nullptr;
             free_ptr = nullptr;
             set_device_ptr = nullptr;
+            get_device_ptr = nullptr;
             device_owned = false;
         }
 
@@ -259,6 +262,7 @@ namespace bass_api
         resolve(channel_slide_attribute_ptr, "BASS_ChannelSlideAttribute");
         resolve(free_ptr, "BASS_Free");
         resolve(set_device_ptr, "BASS_SetDevice");
+        resolve(get_device_ptr, "BASS_GetDevice");
 
         return true;
     }
@@ -322,9 +326,13 @@ namespace bass_api
         else if (error_get_code_ptr != nullptr && error_get_code_ptr() == 14 /* BASS_ERROR_ALREADY */)
         {
             logger::log_info("BASS output device is already initialized; sharing existing device context");
-            if (set_device_ptr != nullptr)
+            if (get_device_ptr != nullptr && set_device_ptr != nullptr)
             {
-                set_device_ptr(static_cast<DWORD>(-1));
+                const DWORD active_device = get_device_ptr();
+                if (active_device != static_cast<DWORD>(-1))
+                {
+                    set_device_ptr(active_device);
+                }
             }
             initialized = true;
         }
