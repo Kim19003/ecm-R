@@ -18,6 +18,9 @@ This changelog tracks the tagged releases recorded in this repository.
 ### Changed
 - Clarified the OpenSpec planner workflow for workflow-only changes: scaffold with `openspec new change "<name>"` without `--skip-specs`, then set `skip_specs: true` in the CLI-resolved `.openspec.yaml` before status-driven artifact capture. Compared with target `main`, this corrects the in-progress workflow integration rather than a released ECM-R runtime regression.
 
+### Fixed
+- Fixed BASS device initialization failure (error 14 / `BASS_ERROR_ALREADY`) when an audio output device is already initialized in the game process, sharing the active device context and ensuring codec plugins (`bassopus.dll`, `bassflac.dll`) load properly.
+
 ## [v0.6.0-alpha] - 2026-08-31
 
 ### Added
