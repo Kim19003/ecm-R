@@ -385,9 +385,18 @@ void read_metadata(std::uint32_t stream_handle, const std::string& extension,
         parse_id3v2(handle, title, artist);
         parse_id3v1(handle, title, artist);
     }
-    else if (extension == "ogg")
+    else if (extension == "ogg" || extension == "opus")
     {
         parse_vorbis(handle, title, artist);
+    }
+    else if (extension == "flac")
+    {
+        parse_vorbis(handle, title, artist);
+        if (title == "N/A" || artist == "N/A")
+        {
+            parse_id3v2(handle, title, artist);
+            parse_id3v1(handle, title, artist);
+        }
     }
     else if (extension == "wav")
     {

@@ -322,7 +322,9 @@ Supported file extensions currently documented in the repository are:
 - `.mp1` (legacy MPEG-1 Layer I; retained for compatibility)
 - `.mp2`
 - `.mp3`
-- `.ogg` (core BASS Ogg Vorbis; Ogg Opus and Ogg FLAC require separate add-ons and are not supported by the current runtime)
+- `.ogg` (core BASS Ogg Vorbis)
+- `.flac` (requires optional `bassflac.dll` add-on beside `bass.dll`)
+- `.opus` (requires optional `bassopus.dll` add-on beside `bass.dll`)
 - `.aif`
 
 ### Track context filtering
@@ -422,7 +424,8 @@ Playback metadata is resolved in this order:
 1. **Embedded tags** (per-file-format):
    - MP3 / MP2 / AIF: ID3v2 (`TIT2` for title, `TPE1` for artist) first; ID3v1 second (per-field fallback, never overwrites ID3v2).
    - MP1: the same ID3 path is retained for legacy compatibility and is not a primary QA target.
-   - OGG: Vorbis Comments (`TITLE`, `ARTIST`) for core BASS Ogg Vorbis streams; Ogg Opus/FLAC add-ons are not loaded by the current runtime.
+   - OGG / OPUS: Vorbis Comments (`TITLE`, `ARTIST`).
+   - FLAC: Vorbis Comments (`TITLE`, `ARTIST`) with ID3v2/ID3v1 fallback.
    - WAV: RIFF INFO (`INAM`, `IART`).
 2. **Filename fallback** (per-field — only fills fields still `"N/A"` after tag parsing):
    - If the filename matches `Artist - Title.ext`, ECM-R uses the left side as artist and the right side as title.
