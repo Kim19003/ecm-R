@@ -78,6 +78,64 @@ namespace
         }
     }
 
+    // Validates whether data conforms to valid UTF-8 byte sequences.
+    bool is_valid_utf8(const char* data, std::size_t len)
+    {
+        std::size_t i = 0;
+        while (i < len)
+        {
+            const unsigned char c = static_cast<unsigned char>(data[i]);
+            if (c == '\0') break;
+            if (c < 0x80)
+            {
+                ++i;
+            }
+            else if ((c & 0xE0) == 0xC0)
+            {
+                if (c < 0xC2 || i + 1 >= len) return false;
+                if ((static_cast<unsigned char>(data[i + 1]) & 0xC0) != 0x80) return false;
+                i += 2;
+            }
+            else if ((c & 0xF0) == 0xE0)
+            {
+                if (i + 2 >= len) return false;
+                const unsigned char c1 = static_cast<unsigned char>(data[i + 1]);
+                const unsigned char c2 = static_cast<unsigned char>(data[i + 2]);
+                if ((c1 & 0xC0) != 0x80 || (c2 & 0xC0) != 0x80) return false;
+                if (c == 0xE0 && c1 < 0xA0) return false;
+                if (c == 0xED && c1 >= 0xA0) return false;
+                i += 3;
+            }
+            else if ((c & 0xF8) == 0xF0)
+            {
+                if (i + 3 >= len) return false;
+                const unsigned char c1 = static_cast<unsigned char>(data[i + 1]);
+                const unsigned char c2 = static_cast<unsigned char>(data[i + 2]);
+                const unsigned char c3 = static_cast<unsigned char>(data[i + 3]);
+                if ((c1 & 0xC0) != 0x80 || (c2 & 0xC0) != 0x80 || (c3 & 0xC0) != 0x80) return false;
+                if (c == 0xF0 && c1 < 0x90) return false;
+                if (c == 0xF4 && c1 >= 0x90) return false;
+                i += 4;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Checks whether data contains any non-ASCII bytes (>= 0x80).
+    bool contains_non_ascii(const char* data, std::size_t len)
+    {
+        for (std::size_t i = 0; i < len && data[i] != '\0'; ++i)
+        {
+            if (static_cast<unsigned char>(data[i]) >= 0x80)
+                return true;
+        }
+        return false;
+    }
+
     // Decode a UTF-16 string to UTF-8. LE if little_endian==true, BE otherwise.
     // Uses memcpy per-element to avoid strict-aliasing UB from reinterpret_cast.
     std::string utf16_to_utf8(const char* data, std::size_t len, bool little_endian)
@@ -195,8 +253,15 @@ namespace
                 std::string value;
                 switch (encoding)
                 {
-                case 0x00: // ISO-8859-1
-                    latin1_to_utf8(frame_data, frame_data_len, value);
+                case 0x00: // ISO-8859-1 (or UTF-8 mislabeled as ISO-8859-1 in ID3v2.3)
+                    if (is_valid_utf8(frame_data, frame_data_len) && contains_non_ascii(frame_data, frame_data_len))
+                    {
+                        value.assign(frame_data, frame_data_len);
+                    }
+                    else
+                    {
+                        latin1_to_utf8(frame_data, frame_data_len, value);
+                    }
                     break;
 
                 case 0x01: // UTF-16 with BOM
@@ -273,7 +338,14 @@ namespace
         {
             if (target != "N/A") return;
             std::string value;
-            latin1_to_utf8(field, len, value);
+            if (is_valid_utf8(field, len) && contains_non_ascii(field, len))
+            {
+                value.assign(field, len);
+            }
+            else
+            {
+                latin1_to_utf8(field, len, value);
+            }
             strip_trailing(value);
             logger::trim(value);
             if (!value.empty())

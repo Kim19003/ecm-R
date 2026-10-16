@@ -438,6 +438,8 @@ Playback metadata is resolved in this order:
 
 Tags that are absent or malformed are silently skipped without crashing. Metadata resolution does not change playlist context, GameFlowState, or the playback state machine.
 
+When displaying metadata in the in-game chyron (`hook::SummonChyron()`), Korean Hangul text is automatically romanized using the Revised Romanization of Korean standard. Because NFSU2's in-game font only provides ANSI/Latin-1 glyphs, romanization allows Korean titles and artists to render legibly rather than turning into unmappable `?` characters under the system ANSI code page. Titles and artists are clamped to 64 code points after romanization to fit within the game's chyron layout, while the original UTF-8 metadata in `audio::currently_playing` is preserved intact.
+
 ## Hook Map and Low-Level Integration
 
 The current NFSU2 integration depends on several direct patches and hooks in `src/app/main.cpp`.
