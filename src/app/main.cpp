@@ -191,6 +191,10 @@ void init()
 		logger::log_debug("Bootstrap stage: applying NFSU2 patches and hooks");
 		*(std::uint8_t*)(0x00534535) = 0xEB; //Prevent save from loading audio values
 
+		// Mute the in-game music early in case sys_init stub has already been passed
+		*(float*)(0x0083AA30) = 0.0f; //FE
+		*(float*)(0x0083AA34) = 0.0f; //IG
+
 		//Disable sliders in menu
 		hook::jump(0x004B6EDA, 0x004B6F92);
 
@@ -456,6 +460,20 @@ DWORD WINAPI OnAttachImpl(LPVOID lpParameter)
 	logger::init();
 	logger::log_info("ECM-R bootstrap logger initialized");
 	logger::log_debug("Bootstrap stage: console preparation completed");
+
+	static HANDLE single_instance_mutex = nullptr;
+	single_instance_mutex = CreateMutexA(nullptr, FALSE, "Local\\ECMR_SingleInstance_Guard");
+	if (GetLastError() == ERROR_ALREADY_EXISTS)
+	{
+		logger::log_error("Another instance of ECM-R is already active in this process; multiple .asi copies detected in scripts folder");
+		global::msg_box("ECM-R Error",
+			"Multiple copies of ECM-R are installed in your game's scripts folder (e.g. ecm-r.x86.asi and a backup like _ecm-r.x86.asi).\n\n"
+			"ASI loaders load all .asi files regardless of prefix, causing conflicting hooks and duplicate playback.\n\n"
+			"Please delete or rename the extra .asi file so only one ECM-R plugin is present.");
+		global::shutdown.store(true, std::memory_order_release);
+		return 0;
+	}
+
 	global::game = game_t::NFSU2;
 
 

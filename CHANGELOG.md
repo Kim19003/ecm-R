@@ -20,7 +20,9 @@ This changelog tracks the tagged releases recorded in this repository.
 - Clarified the OpenSpec planner workflow for workflow-only changes: scaffold with `openspec new change "<name>"` without `--skip-specs`, then set `skip_specs: true` in the CLI-resolved `.openspec.yaml` before status-driven artifact capture. Compared with target `main`, this corrects the in-progress workflow integration rather than a released ECM-R runtime regression.
 
 ### Fixed
-- Fixed BASS device initialization failure (error 14 / `BASS_ERROR_ALREADY`) when an audio output device is already initialized in the game process, sharing the active device context and ensuring codec plugins (`bassopus.dll`, `bassflac.dll`) load properly.
+- Fixed BASS device initialization fallback when sharing an already-initialized device context (error 14 / `BASS_ERROR_ALREADY`), querying `BASS_GetDevice` to obtain and assign the valid active device ID instead of passing `-1` to `BASS_SetDevice` (which failed with error 23 / `BASS_ERROR_DEVICE`).
+- Fixed game music (EA Trax) volume leaks during playback by applying the mute patch immediately during `init()`, in `sys_init_()`, and continuously enforcing zero volume on `0x0083AA30` (FE) and `0x0083AA34` (IG) in `audio::update()`.
+- Added a process single-instance guard to prevent duplicate ECM-R `.asi` files (such as renamed backups like `_ecm-r.x86.asi`) from running concurrently in the game process, which caused dual-track playback, hook corruption, and device init collisions.
 - Fixed ID3v2 and ID3v1 tag parsing mangling UTF-8 text into ISO-8859-1 Mojibake when frames specify encoding byte `0x00` (standard in ID3v2.3 tags storing UTF-8 payloads).
 
 ## [v0.6.0-alpha] - 2026-08-31

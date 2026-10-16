@@ -710,6 +710,12 @@ void audio::update()
 		return;
 	}
 
+	if (global::game == game_t::NFSU2)
+	{
+		*(float*)(0x0083AA30) = 0.0f; // FE
+		*(float*)(0x0083AA34) = 0.0f; // IG
+	}
+
 	const GameFlowState previous_state = global::state;
 	global::state = game_state;
 	if (!has_logged_state || previous_state != global::state)
