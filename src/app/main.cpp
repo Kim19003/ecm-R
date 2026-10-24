@@ -135,6 +135,8 @@ void sub_00537980(int a2, char* a3, int a4)
 		return;
 	}
 
+	logger::log_info(logger::va("FNG Package loaded: %s", a3));
+
 	if (audio::ingame_movie_muting || audio::pause_music_on_game_pause)
 	{
 		audio::sync_game_pause();
