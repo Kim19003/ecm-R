@@ -7,7 +7,7 @@ This changelog tracks the tagged releases recorded in this repository.
 ## [Unreleased]
 
 ### Added
-- Added automatic music volume ducking during in-game phone calls and voice messages (`UI_EngageMessageDialog.fng`, `UI_SMS_Mailbox.fng`, etc.) with smooth asynchronous fading via `BASS_ChannelSlideAttribute`, configurable via `[config] duck_music_on_calls` (enabled by default) and `[config] call_duck_volume_percent` (default 25%) with in-game overlay controls.
+- Added automatic music volume ducking during in-game phone calls, character speech (e.g. Rachel calling in free roam or after car upgrades), and voice messages with smooth asynchronous fading via `BASS_ChannelSlideAttribute`, monitoring both active speech audio streams (`UG2_Speech.big`) and UI message packages, configurable via `[config] duck_music_on_calls` (enabled by default) and `[config] call_duck_volume_percent` (default 25%) with in-game overlay controls.
 - Added modern codec support for FLAC (`.flac`) and Opus (`.opus`) audio files via dynamic loading of optional `bassflac.dll` and `bassopus.dll` add-ons, with Vorbis Comments and ID3 metadata tag resolution.
 - Added automatic Korean Hangul romanization (Revised Romanization of Korean) for the in-game chyron notification, converting Korean song titles and artists to Latin script so they render cleanly in NFSU2's in-game font instead of showing unmappable '?' question marks.
 - Added configurable in-game pause menu music pausing via `[config] pause_music_on_game_pause` (enabled by default), suspending playback while in-game pause menus and dialogs are active and resuming seamlessly from the exact same position upon unpausing.

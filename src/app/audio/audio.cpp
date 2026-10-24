@@ -286,6 +286,66 @@ namespace
 		return false;
 	}
 
+	// Reports whether NFSU2 is actively playing a speech or NIS dialogue stream (e.g. Rachel calling).
+	bool is_speech_stream_playing()
+	{
+		if (global::game != game_t::NFSU2)
+		{
+			return false;
+		}
+
+		// 1. In-game phone icon / incoming call ringing flag (0x004B1F95 sets to 1, 0x004B1FCC sets to 0)
+		if (*reinterpret_cast<const std::uint8_t*>(0x00837AA4) != 0)
+		{
+			return true;
+		}
+
+		// 2. Audio stream manager active stream player checks
+		const auto stream_mgr = *reinterpret_cast<const std::uintptr_t*>(0x0082BA30);
+		if (stream_mgr >= 0x10000)
+		{
+			__try
+			{
+				// Player 1 (offset +0x04): SFXObj_Speech instance attached at +0x54
+				const auto player4 = *reinterpret_cast<const std::uintptr_t*>(stream_mgr + 0x04);
+				if (player4 >= 0x10000)
+				{
+					const auto speech_obj = *reinterpret_cast<const std::uintptr_t*>(player4 + 0x54);
+					if (speech_obj >= 0x10000)
+					{
+						// SFXObj_Speech::Update (0x004751A0) sets offset +8 (in-game / free roam) to 1 when actively playing speech,
+						// and clears it to 0 when idle (0x004751EF).
+						if (*reinterpret_cast<const std::uint32_t*>(speech_obj + 0x08) != 0)
+						{
+							return true;
+						}
+					}
+				}
+
+				// Player 2 (offset +0x08): SFXObj_NISStream instance attached at +0x50
+				const auto player8 = *reinterpret_cast<const std::uintptr_t*>(stream_mgr + 0x08);
+				if (player8 >= 0x10000)
+				{
+					const auto nis_obj = *reinterpret_cast<const std::uintptr_t*>(player8 + 0x50);
+					if (nis_obj >= 0x10000)
+					{
+						// SFXObj_NISStream::Update (0x0047548B) sets offset +0x18 to 1 when actively playing dialogue,
+						// and clears it to 0 when idle (0x00475494).
+						if (*reinterpret_cast<const std::uint32_t*>(nis_obj + 0x18) != 0)
+						{
+							return true;
+						}
+					}
+				}
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER)
+			{
+			}
+		}
+
+		return false;
+	}
+
 	// Reports whether an in-game pause menu package is currently active.
 	bool is_pause_menu_loaded()
 	{
@@ -343,9 +403,9 @@ namespace
 		{
 		case game_t::NFSU2:
 			audio::call_detection.emplace_back("UI_EngageMessageDialog.fng");
-			audio::call_detection.emplace_back("UI_SMS_Mailbox.fng");
 			audio::call_detection.emplace_back("UI_EngageMessage.fng");
 			audio::call_detection.emplace_back("EngageMessageDialog.fng");
+			audio::call_detection.emplace_back("UI_SMS_Mailbox.fng");
 			break;
 		}
 	}
@@ -900,24 +960,35 @@ std::int32_t audio::current_effective_volume()
 
 void audio::sync_call_ducking()
 {
-	if (!audio::is_ready() || audio::chan[0] == 0)
+	if (!audio::is_ready())
 	{
 		return;
 	}
 
-	const bool should_duck = audio::duck_music_on_calls && is_call_package_loaded();
+	const bool is_sms_open = hook::IsPackageLoaded("UI_SMS_Mailbox.fng");
+	const bool is_call_active = (game_state == GameFlowState::Racing) &&
+		(is_call_package_loaded() || is_speech_stream_playing());
+	const bool should_duck = audio::duck_music_on_calls && (is_sms_open || is_call_active);
+
 	if (should_duck != audio::is_call_ducked)
 	{
 		audio::is_call_ducked = should_duck;
-		logger::log_info(logger::va("Phone call music ducking %s",
-			should_duck ? "active (sliding volume down)" : "ended (sliding volume up)"));
+		logger::log_info(logger::va("Phone call music ducking %s (pkg=%d, speech=%d, sms=%d, state=%d)",
+			should_duck ? "active (sliding volume down)" : "ended (sliding volume up)",
+			is_call_package_loaded(),
+			is_speech_stream_playing(),
+			is_sms_open,
+			static_cast<int>(game_state)));
 
-		const std::int32_t target_volume = audio::current_effective_volume();
-		const float target_vol_f = static_cast<float>(target_volume) / 100.0f;
-		const DWORD slide_ms = should_duck ? 200 : 400;
+		if (audio::chan[0] != 0)
+		{
+			const std::int32_t target_volume = audio::current_effective_volume();
+			const float target_vol_f = static_cast<float>(target_volume) / 100.0f;
+			const DWORD slide_ms = should_duck ? 200 : 400;
 
-		bass_api::slide_channel_volume(audio::chan[0], target_vol_f, slide_ms);
-		audio::applied_volume = target_volume;
+			bass_api::slide_channel_volume(audio::chan[0], target_vol_f, slide_ms);
+			audio::applied_volume = target_volume;
+		}
 	}
 }
 
