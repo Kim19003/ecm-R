@@ -1091,37 +1091,62 @@ void menus::about()
 	}
 }
 
-// Renders the discovered playlist as a simple track list.
+// Renders the playlist in active playback order, with track selection support.
 void menus::playlist()
 {
 	const std::string menu_label = std::string(localization::text("menu.playlist")) + "##playlist_menu";
 	if (ImGui::BeginMenu(menu_label.c_str()))
 	{
 		audio::resolve_playlist_metadata();
-		for (int i = 0; i < audio::playlist_files.size(); ++i)
+
+		if (audio::playlist_order.empty())
 		{
-			if (!audio::is_track_playable(audio::playlist_files[i].first))
-			{
-				continue;
-			}
+			audio::create_playlist_order();
+		}
 
-			std::string display;
-			const auto metadata = audio::playlist_metadata.find(audio::playlist_files[i].first);
-			if (metadata != audio::playlist_metadata.end())
-			{
-				display = metadata->second.artist != "N/A"
-					? metadata->second.artist + " - " + metadata->second.title
-					: metadata->second.title;
-			}
-			else
-			{
-				std::string title;
-				std::string artist;
-				resolve_file_metadata(audio::playlist_files[i].first.c_str(), 0, title, artist);
-				display = artist != "N/A" ? artist + " - " + title : title;
-			}
+		const int total_tracks = static_cast<int>(audio::playlist_order.size());
+		if (total_tracks == 0)
+		{
+			ImGui::TextDisabled("%s", localization::text("playlist.empty"));
+		}
+		else
+		{
+			ImGui::TextDisabled("%s", localization::format("actions.tracks", {{ "count", std::to_string(total_tracks) }}).c_str());
+			ImGui::Separator();
 
-			ImGui::Text("%s", display.c_str());
+			for (int i = 0; i < total_tracks; ++i)
+			{
+				const int file_index = audio::playlist_order[i];
+				if (file_index < 0 || file_index >= static_cast<int>(audio::playlist_files.size()))
+				{
+					continue;
+				}
+
+				const auto& track = audio::playlist_files[file_index];
+				std::string display;
+				const auto metadata = audio::playlist_metadata.find(track.first);
+				if (metadata != audio::playlist_metadata.end())
+				{
+					display = metadata->second.artist != "N/A"
+						? metadata->second.artist + " - " + metadata->second.title
+						: metadata->second.title;
+				}
+				else
+				{
+					std::string title;
+					std::string artist;
+					resolve_file_metadata(track.first.c_str(), 0, title, artist);
+					display = artist != "N/A" ? artist + " - " + title : title;
+				}
+
+				const std::string item_label = std::to_string(i + 1) + ". " + display + "##track_" + std::to_string(i);
+				const bool is_current = (i == audio::current_song_index);
+
+				if (ImGui::MenuItem(item_label.c_str(), nullptr, is_current))
+				{
+					audio::play_song_at_order_index(i);
+				}
+			}
 		}
 
 		ImGui::EndMenu();

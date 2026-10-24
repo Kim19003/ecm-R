@@ -57,6 +57,8 @@ public:
 	static void play_next_song();
 	/// Moves backward through playback history or playlist order.
    static void play_previous_song();
+	/// Plays a specific song by its index inside the active playlist order.
+	static void play_song_at_order_index(int order_index);
 	/// Skips the current song and starts the next playable track immediately.
 	static void skip_to_next_track();
 	/// Toggles the user-requested pause state independently from game-driven pauses.
