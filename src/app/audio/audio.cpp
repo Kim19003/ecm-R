@@ -750,6 +750,7 @@ void audio::init()
 
 	probe_unplayable_files();
 	audio::create_playlist_order();
+	audio::current_song_index = -1;
 	logger::log_info(logger::va("Playlist ready: %zu discovered track(s), %zu playable track(s)", audio::playlist_files.size(), audio::playlist_order.size()));
 	audio::game_paused = true;
 	audio::paused = true;
@@ -1221,6 +1222,35 @@ void audio::play_previous_song()
 	play_relative_song(-1);
 }
 
+void audio::play_song_at_order_index(const int order_index)
+{
+	if (!audio::is_ready())
+	{
+		return;
+	}
+
+	if (order_index < 0 || order_index >= static_cast<int>(audio::playlist_order.size()))
+	{
+		return;
+	}
+
+	if (audio::manual_paused)
+	{
+		audio::manual_paused = false;
+		sync_pause_state();
+	}
+
+	if (audio::chan[0] != 0)
+	{
+		audio::stop(0);
+	}
+
+	audio::playlist_ended = false;
+	audio::current_song_index = order_index;
+	play_song_from_playlist_order(order_index, true);
+	sync_pause_state();
+}
+
 void audio::skip_to_next_track()
 {
 	if (!audio::is_ready())
@@ -1250,9 +1280,24 @@ void audio::set_shuffle_enabled(const bool enabled)
 		return;
 	}
 
+	int current_entry = -1;
+	if (audio::playing && audio::current_song_index >= 0 && audio::current_song_index < static_cast<int>(audio::playlist_order.size()))
+	{
+		current_entry = audio::playlist_order[audio::current_song_index];
+	}
+
 	audio::shuffle_enabled = enabled;
 	audio::create_playlist_order();
-	audio::current_song_index = -1;
+
+	if (current_entry >= 0)
+	{
+		sync_current_song_index_from_playlist_entry(current_entry);
+	}
+	else
+	{
+		audio::current_song_index = -1;
+	}
+
 	settings::save_config_boolean("shuffle_enabled", audio::shuffle_enabled);
 }
 
@@ -1419,7 +1464,7 @@ std::vector<std::pair<std::string, std::string>> audio::playlist_files;
 std::unordered_map<std::string, playing_t> audio::playlist_metadata;
 std::vector<int> audio::playlist_order;
 std::vector<int> audio::playback_history;
-int audio::current_song_index = 0;
+int audio::current_song_index = -1;
 int audio::playback_history_index = -1;
 std::int32_t audio::playlist_context = -1;
 // MP1 is retained as a legacy MPEG-1 Layer I compatibility extension; new QA targets newer formats.
