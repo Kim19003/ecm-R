@@ -494,6 +494,11 @@ namespace
 			return false;
 		}
 
+		if (!is_track_valid_for_context(audio::playlist_files[playlist_entry_index].second, get_playlist_context()))
+		{
+			return false;
+		}
+
 		bool played = false;
 		switch (global::state)
 		{
@@ -538,6 +543,17 @@ namespace
 	bool ensure_playlist_order_for_current_context(const int reset_index)
 	{
 		const auto playlist_context = static_cast<std::int32_t>(get_playlist_context());
+		if (audio::persistent_shuffle)
+		{
+			if (audio::playlist_order.empty())
+			{
+				audio::create_playlist_order();
+				audio::current_song_index = reset_index;
+			}
+			audio::playlist_context = playlist_context;
+			return !audio::playlist_order.empty();
+		}
+
 		if (audio::playlist_order.empty() || audio::playlist_context != playlist_context)
 		{
          if (audio::playlist_context != playlist_context)
@@ -672,6 +688,11 @@ namespace
 				if (!audio::repeat_enabled)
 				{
 					break;
+				}
+
+				if (delta > 0)
+				{
+					audio::create_playlist_order();
 				}
 
 				next_song_index = delta > 0 ? 0 : static_cast<int>(audio::playlist_order.size()) - 1;
@@ -836,6 +857,13 @@ void audio::update()
 	}
 
 	const bool playlist_context_changed = audio::playlist_context != current_context_value;
+	if (audio::persistent_shuffle)
+	{
+		if (audio::playing && !audio::can_resume_current_song())
+		{
+			audio::stop(0);
+		}
+	}
 	if (!audio::paused && !audio::playing && (!audio::playlist_ended || playlist_context_changed))
 	{
 		audio::play_next_song();
@@ -931,6 +959,11 @@ int audio::current_playlist_track_count()
 bool audio::is_track_playable(const std::string& file)
 {
 	return unplayable_files.find(file) == unplayable_files.end();
+}
+
+bool audio::is_track_valid_for_current_context(const std::string& track_context)
+{
+	return is_track_valid_for_context(track_context, get_playlist_context());
 }
 
 std::int32_t audio::current_context_volume()
@@ -1033,7 +1066,7 @@ void audio::create_playlist_order()
 	for (int i = 0; i < audio::playlist_files.size(); ++i)
 	{
 		if (audio::is_track_playable(audio::playlist_files[i].first) &&
-			is_track_valid_for_context(audio::playlist_files[i].second, playlist_context))
+			(audio::persistent_shuffle || is_track_valid_for_context(audio::playlist_files[i].second, playlist_context)))
 		{
 			audio::playlist_order.emplace_back(i);
 		}
@@ -1234,6 +1267,17 @@ void audio::play_song_at_order_index(const int order_index)
 		return;
 	}
 
+	const int playlist_entry_index = audio::playlist_order[order_index];
+	if (playlist_entry_index < 0 || playlist_entry_index >= static_cast<int>(audio::playlist_files.size()))
+	{
+		return;
+	}
+
+	if (!is_track_valid_for_context(audio::playlist_files[playlist_entry_index].second, get_playlist_context()))
+	{
+		return;
+	}
+
 	if (audio::manual_paused)
 	{
 		audio::manual_paused = false;
@@ -1304,6 +1348,39 @@ void audio::set_shuffle_enabled(const bool enabled)
 void audio::toggle_shuffle_enabled()
 {
 	audio::set_shuffle_enabled(!audio::shuffle_enabled);
+}
+
+void audio::set_persistent_shuffle(const bool enabled)
+{
+	if (!audio::is_ready())
+	{
+		return;
+	}
+
+	if (audio::persistent_shuffle == enabled)
+	{
+		return;
+	}
+
+	int current_entry = -1;
+	if (audio::playing && audio::current_song_index >= 0 && audio::current_song_index < static_cast<int>(audio::playlist_order.size()))
+	{
+		current_entry = audio::playlist_order[audio::current_song_index];
+	}
+
+	audio::persistent_shuffle = enabled;
+	audio::create_playlist_order();
+
+	if (current_entry >= 0)
+	{
+		sync_current_song_index_from_playlist_entry(current_entry);
+	}
+	else
+	{
+		audio::current_song_index = -1;
+	}
+
+	settings::save_config_boolean("persistent_shuffle", audio::persistent_shuffle);
 }
 
 void audio::set_repeat_enabled(const bool enabled)
@@ -1452,6 +1529,7 @@ bool audio::duck_music_on_calls = true;
 std::int32_t audio::call_duck_volume_percent = 25;
 bool audio::is_call_ducked = false;
 bool audio::shuffle_enabled = true;
+bool audio::persistent_shuffle = true;
 bool audio::repeat_enabled = true;
 bool audio::playlist_ended = false;
 bool audio::pending_chyron = false;

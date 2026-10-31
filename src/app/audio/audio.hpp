@@ -47,6 +47,8 @@ public:
 	static int current_playlist_track_count();
 	/// Reports whether BASS accepted the file during this session's startup probe.
 	static bool is_track_playable(const std::string& file);
+	/// Reports whether a track context tag is valid for the currently active context.
+	static bool is_track_valid_for_current_context(const std::string& track_context);
 	/// Resolves the effective volume for the current frontend or in-game context.
    static std::int32_t current_context_volume();
 	/// Resolves the live effective volume, applying phone call ducking if active.
@@ -67,6 +69,8 @@ public:
 	static void set_shuffle_enabled(bool enabled);
 	/// Flips shuffle mode using the current playlist state.
 	static void toggle_shuffle_enabled();
+	/// Enables or disables persistent shuffle across context switches and loading screens.
+	static void set_persistent_shuffle(bool enabled);
 	/// Enables or disables repeat for end-of-playlist navigation.
 	static void set_repeat_enabled(bool enabled);
 	/// Flips repeat mode.
@@ -129,6 +133,7 @@ public:
 	static std::int32_t call_duck_volume_percent;
 	static bool is_call_ducked;
 	static bool shuffle_enabled;
+	static bool persistent_shuffle;
 	static bool repeat_enabled;
 	static bool playlist_ended;
 	static bool pending_chyron;

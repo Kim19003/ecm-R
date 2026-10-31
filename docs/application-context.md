@@ -355,8 +355,9 @@ The current playback system is centered on a generated `playlist_order` rather t
 
 Important behavior:
 
-- The order is rebuilt when the effective context changes.
-- The order is rebuilt when shuffle is toggled.
+- With `persistent_shuffle = true` (default), the order is generated once at startup and maintained across game context transitions and loading screens, only reshuffling when the queue finishes its cycle (with repeat enabled).
+- With `persistent_shuffle = false`, the order is rebuilt when the effective context changes.
+- The order is rebuilt when shuffle or persistent shuffle is toggled.
 - Non-shuffle mode clears playback history.
 - Shuffle mode keeps a bounded playback history so `Previous` can walk real history instead of fabricating reverse order.
 - Repeat disabled allows the playlist to end after the last valid track.
@@ -581,7 +582,7 @@ The settings layer persists:
 
 - playlist folder name,
 - legacy and context-specific volume values,
-- shuffle and repeat flags,
+- shuffle, repeat, and persistent shuffle flags,
 - loading-screen handling,
 - in-game movie muting,
 - overlay language,
