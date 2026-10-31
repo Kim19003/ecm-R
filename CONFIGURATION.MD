@@ -25,6 +25,7 @@ ingame_movie_muting = true
 pause_music_on_game_pause = true
 log_level = info
 language = en
+ui_scale = auto
 
 [keys]
 toggle_overlay = F11
@@ -149,6 +150,12 @@ Game Folder/
 - **Accepted values:** `error`, `warning`, `info`, or `debug` (case-insensitive and whitespace-trimmed).
 - **Behavior:** Missing or invalid values are repaired to `info`. Bootstrap logging starts unfiltered at `debug` before the INI is read, then applies this value without closing, truncating, or recreating the log.
 - **File and retention:** `ecm-r/ecm-r.x86.log` is created alongside the translation bundles, capped at 2 MiB. ECM-R creates the `ecm-r/` folder when missing and validates that an existing path is a directory. When the limit would be exceeded, the active file is moved to `ecm-r/ecm-r.x86.log.1`; the previous `.1` is replaced and no `.2` is created. Older root-level logs are not migrated. Oversized records are bounded with an explicit truncation marker. If file operations fail, logging continues through the console for that session.
+
+### `ui_scale`
+- **Description:** Scaling factor for the in-game ImGui overlay and font on high-resolution screens (1440p, 4K, ultrawide).
+- **Default:** `auto`
+- **Accepted values:** `auto` (or `default`), or a positive decimal number (e.g., `1.0`, `1.25`, `1.5`, `2.0`, clamped between `0.5` and `4.0`).
+- **Behavior:** When set to `auto`, ECM-R automatically calculates the scale factor based on the game's render window resolution (scaled relative to 1080p, with a minimum of 1.0x) and monitor DPI. If set to a specific number, ECM-R scales the fonts and all UI elements to that factor at startup. Missing or invalid values default to `auto`.
 
 ### Accepted Boolean Formats
 All `[config]` boolean parameters accept:

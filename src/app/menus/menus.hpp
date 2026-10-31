@@ -15,8 +15,15 @@ public:
 	static void present();
 
 	static std::string currently_playing;
+	/// Current active UI scaling factor (1.0 = baseline 1080p).
+	static float scale;
+	/// Configured scaling mode or factor ("auto" or float string).
+	static std::string ui_scale_setting;
 
 private:
+	/// Determines and applies the active UI scale factor based on configuration and resolution.
+	static void determine_scale();
+
 	/// Loads and configures the font atlas used by the overlay.
 	static void build_font(ImGuiIO& io);
 

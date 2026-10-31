@@ -24,6 +24,8 @@ public:
 	static bool save_config_integer(const char* key, int value);
 	/// Saves the active overlay language inside the [config] section.
 	static bool save_language(localization::language value);
+	/// Saves the active UI scaling mode/factor inside the [config] section.
+	static bool save_ui_scale(const std::string& value);
 	/// Saves one hotkey binding inside the [keys] section.
 	static bool save_hotkey_binding(const char* key_name, std::uint32_t key);
 	/// Writes every current hotkey binding to the INI file.

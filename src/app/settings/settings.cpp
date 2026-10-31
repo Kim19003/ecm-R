@@ -160,6 +160,12 @@ namespace
 		return std::string("call_duck_volume_percent = \"") + std::to_string(percent) + "\"";
 	}
 
+	// Formats the persisted UI scale mode/factor line.
+	std::string build_ui_scale_line(const std::string& scale_str)
+	{
+		return std::string("ui_scale = ") + (scale_str.empty() ? "auto" : scale_str);
+	}
+
 	// Formats the persisted logger level line.
 	std::string build_log_level_line(const logger::level configured_level)
 	{
@@ -274,7 +280,7 @@ namespace
 	}
 
 	// Rebuilds the complete INI text from the current runtime state.
-	std::string build_config_text(const std::string& playlist, const int volume, const int frontend_volume, const int ingame_volume, const bool stop_music_on_loading_screens, const bool ingame_movie_muting, const bool pause_music_on_game_pause, const bool duck_music_on_calls, const int call_duck_volume_percent, const bool shuffle_enabled, const bool persistent_shuffle, const bool repeat_enabled, const logger::level configured_log_level)
+	std::string build_config_text(const std::string& playlist, const int volume, const int frontend_volume, const int ingame_volume, const bool stop_music_on_loading_screens, const bool ingame_movie_muting, const bool pause_music_on_game_pause, const bool duck_music_on_calls, const int call_duck_volume_percent, const bool shuffle_enabled, const bool persistent_shuffle, const bool repeat_enabled, const logger::level configured_log_level, const std::string& ui_scale)
 	{
 		std::ostringstream output;
 		output << "[core]\n";
@@ -293,7 +299,8 @@ namespace
 		output << build_duck_music_on_calls_line(duck_music_on_calls) << "\n";
 		output << build_call_duck_volume_percent_line(call_duck_volume_percent) << "\n";
 		output << build_log_level_line(configured_log_level) << "\n";
-		output << "language = " << localization::code(localization::current()) << "\n\n";
+		output << "language = " << localization::code(localization::current()) << "\n";
+		output << build_ui_scale_line(ui_scale) << "\n\n";
 		output << "[keys]\n";
 		for (const auto& binding : input::hotkey_bindings())
 		{
@@ -350,6 +357,54 @@ void settings::update()
 		const bool missing_shuffle_enabled = ini_get(config, "config", "shuffle_enabled") == nullptr;
 		const bool missing_repeat_enabled = ini_get(config, "config", "repeat_enabled") == nullptr;
 		const bool missing_persistent_shuffle = ini_get(config, "config", "persistent_shuffle") == nullptr;
+		const char* configured_ui_scale_value = ini_get(config, "config", "ui_scale");
+		const bool missing_ui_scale = configured_ui_scale_value == nullptr;
+		std::string parsed_ui_scale = "auto";
+		bool invalid_ui_scale = false;
+
+		if (configured_ui_scale_value != nullptr)
+		{
+			std::string raw = trim_copy(configured_ui_scale_value);
+			if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"')
+			{
+				raw = trim_copy(raw.substr(1, raw.size() - 2));
+			}
+
+			std::string lower = raw;
+			std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+
+			if (lower.empty() || lower == "auto" || lower == "default")
+			{
+				parsed_ui_scale = "auto";
+			}
+			else
+			{
+				try
+				{
+					float val = std::stof(raw);
+					if (val >= 0.5f && val <= 4.0f)
+					{
+						parsed_ui_scale = raw;
+					}
+					else
+					{
+						invalid_ui_scale = true;
+						parsed_ui_scale = "auto";
+					}
+				}
+				catch (...)
+				{
+					invalid_ui_scale = true;
+					parsed_ui_scale = "auto";
+				}
+			}
+		}
+
+		menus::ui_scale_setting = parsed_ui_scale;
+		if (missing_ui_scale || invalid_ui_scale)
+		{
+			logger::log_info("Missing or invalid [config] ui_scale; defaulting to auto");
+		}
 		const char* configured_language_value = ini_get(config, "config", "language");
 		const char* configured_log_level_value = ini_get(config, "config", "log_level");
 		localization::language configured_language = localization::language::en;
@@ -419,9 +474,9 @@ void settings::update()
 
 		settings::sync_trax_entries();
 
-		if (version_changed || missing_stop_music_on_loading_screens || missing_ingame_movie_muting || missing_pause_music_on_game_pause || missing_duck_music_on_calls || missing_call_duck_volume_percent || old_ingame_movie_muting_present || old_experimental_section_present || legacy_ingame_movie_muting_present || missing_shuffle_enabled || missing_repeat_enabled || missing_persistent_shuffle || missing_language || invalid_language || missing_log_level || invalid_log_level || noncanonical_log_level || missing_frontend_volume || missing_ingame_volume || missing_hotkey_entry || invalid_hotkey_entry)
+		if (version_changed || missing_stop_music_on_loading_screens || missing_ingame_movie_muting || missing_pause_music_on_game_pause || missing_duck_music_on_calls || missing_call_duck_volume_percent || old_ingame_movie_muting_present || old_experimental_section_present || legacy_ingame_movie_muting_present || missing_shuffle_enabled || missing_repeat_enabled || missing_persistent_shuffle || missing_language || invalid_language || missing_log_level || invalid_log_level || noncanonical_log_level || missing_frontend_volume || missing_ingame_volume || missing_hotkey_entry || invalid_hotkey_entry || missing_ui_scale || invalid_ui_scale)
 		{
-			fs::write(settings::config_file, build_config_text(audio::playlist_name, audio::volume, audio::frontend_volume, audio::ingame_volume, audio::stop_music_on_loading_screens, audio::ingame_movie_muting, audio::pause_music_on_game_pause, audio::duck_music_on_calls, audio::call_duck_volume_percent, audio::shuffle_enabled, audio::persistent_shuffle, audio::repeat_enabled, logger::current_level_value()), false);
+			fs::write(settings::config_file, build_config_text(audio::playlist_name, audio::volume, audio::frontend_volume, audio::ingame_volume, audio::stop_music_on_loading_screens, audio::ingame_movie_muting, audio::pause_music_on_game_pause, audio::duck_music_on_calls, audio::call_duck_volume_percent, audio::shuffle_enabled, audio::persistent_shuffle, audio::repeat_enabled, logger::current_level_value(), menus::ui_scale_setting), false);
 			logger::log_debug("Configuration migration/rewrite completed");
 		}
 	}
@@ -453,7 +508,7 @@ void settings::update()
 		audio::pause_music_on_game_pause = true;
 		audio::duck_music_on_calls = true;
 		audio::call_duck_volume_percent = 25;
-		fs::write(settings::config_file, build_config_text(audio::playlist_name, audio::volume, audio::frontend_volume, audio::ingame_volume, audio::stop_music_on_loading_screens, audio::ingame_movie_muting, audio::pause_music_on_game_pause, audio::duck_music_on_calls, audio::call_duck_volume_percent, audio::shuffle_enabled, audio::persistent_shuffle, audio::repeat_enabled, logger::current_level_value()), false);
+		fs::write(settings::config_file, build_config_text(audio::playlist_name, audio::volume, audio::frontend_volume, audio::ingame_volume, audio::stop_music_on_loading_screens, audio::ingame_movie_muting, audio::pause_music_on_game_pause, audio::duck_music_on_calls, audio::call_duck_volume_percent, audio::shuffle_enabled, audio::persistent_shuffle, audio::repeat_enabled, logger::current_level_value(), menus::ui_scale_setting), false);
 		return;
 	}
 
@@ -603,3 +658,8 @@ bool settings::get_boolean(const char* bool_text)
 
 //Hardcoded until x64 becomes useable
 std::string settings::config_file = "ecm-r.x86.ini";
+
+bool settings::save_ui_scale(const std::string& value)
+{
+	return save_ini_value("config", "ui_scale", value);
+}
