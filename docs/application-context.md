@@ -574,7 +574,7 @@ The generated configuration contains these sections:
 - `[keys]`
 - `[trax]`
 
-`[config] language` accepts `en` or `es`, defaults to `en`, and invalid or missing values are repaired to `en`. `[config] log_level` accepts `error`, `warning`, `info`, or `debug`, defaults to `info` after bootstrap, and invalid or missing values are repaired to `info`.
+`[config] language` accepts `en` or `es`, defaults to `en`, and invalid or missing values are repaired to `en`. `[config] log_level` accepts `error`, `warning`, `info`, or `debug`, defaults to `info` after bootstrap, and invalid or missing values are repaired to `info`. `[config] ui_scale` accepts `auto` or a positive decimal number (clamped between `0.5` and `4.0`), defaults to `auto`, and invalid or missing values are repaired to `auto`.
 
 ### Persisted behavior
 
@@ -586,6 +586,7 @@ The settings layer persists:
 - loading-screen handling,
 - in-game movie muting,
 - overlay language,
+- overlay UI scaling factor,
 - diagnostic log level,
 - hotkey bindings,
 - per-track routing in `[trax]`.
@@ -600,6 +601,7 @@ The settings layer also repairs or migrates older configurations by:
 - adding missing config keys,
 - repairing missing or invalid `[config] language` values to `en`,
 - repairing missing, invalid, or non-canonical `[config] log_level` values to `info`,
+- repairing missing or invalid `[config] ui_scale` values to `auto`,
 - restoring invalid or duplicate hotkey entries to safe defaults,
 - rewriting the config when version or structure drift is detected.
 

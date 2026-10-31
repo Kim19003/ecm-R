@@ -615,12 +615,83 @@ namespace
 }
 
 // Creates the ImGui context, loads fonts, and kicks off the release check.
+float menus::scale = 1.0f;
+std::string menus::ui_scale_setting = "auto";
+
+// Determines and applies the active UI scale factor based on configuration and resolution.
+void menus::determine_scale()
+{
+	float target_scale = 1.0f;
+	std::string mode = ui_scale_setting;
+
+	auto first = std::find_if_not(mode.begin(), mode.end(), [](unsigned char ch) { return std::isspace(ch) != 0; });
+	auto last = std::find_if_not(mode.rbegin(), mode.rend(), [](unsigned char ch) { return std::isspace(ch) != 0; }).base();
+	if (first < last)
+	{
+		mode = std::string(first, last);
+	}
+	else
+	{
+		mode.clear();
+	}
+
+	std::string lower_mode = mode;
+	std::transform(lower_mode.begin(), lower_mode.end(), lower_mode.begin(), [](unsigned char ch) {
+		return static_cast<char>(std::tolower(ch));
+	});
+
+	if (lower_mode.empty() || lower_mode == "auto" || lower_mode == "default")
+	{
+		if (global::hwnd != nullptr)
+		{
+			RECT rect{};
+			if (::GetClientRect(global::hwnd, &rect))
+			{
+				const int height = rect.bottom - rect.top;
+				if (height > 0)
+				{
+					// Baseline: 1080p (height = 1080) -> scale 1.0f
+					// E.g. 1440p -> 1.333f, 4K (2160p) -> 2.0f
+					const float res_scale = static_cast<float>(height) / 1080.0f;
+					if (res_scale > target_scale) { target_scale = res_scale; }
+				}
+			}
+
+			const float dpi_scale = ImGui_ImplWin32_GetDpiScaleForHwnd(global::hwnd);
+			if (dpi_scale > 0.0f)
+			{
+				if (dpi_scale > target_scale) { target_scale = dpi_scale; }
+			}
+		}
+	}
+	else
+	{
+		try
+		{
+			target_scale = std::stof(mode);
+		}
+		catch (...)
+		{
+			target_scale = 1.0f;
+		}
+	}
+
+	menus::scale = (target_scale < 0.5f) ? 0.5f : ((target_scale > 4.0f) ? 4.0f : target_scale);
+	logger::log_info(logger::va("Overlay startup UI scale: %.2fx (configured: %s)", menus::scale, ui_scale_setting.c_str()));
+}
+
 void menus::init()
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 
 	ImGui::GetIO().IniFilename = nullptr;
+
+	menus::determine_scale();
+	if (std::abs(menus::scale - 1.0f) > 0.001f)
+	{
+		ImGui::GetStyle().ScaleAllSizes(menus::scale);
+	}
 
 	menus::build_font(ImGui::GetIO());
 	std::call_once(version_check_once, run_version_check_once);
@@ -784,7 +855,7 @@ void menus::actions()
 	if (ImGui::BeginMenu(menu_label.c_str()))
 	{
 		ImGui::Text("%s", localization::text("actions.audio_controls"));
-        ImGui::PushItemWidth(120.0f);
+        ImGui::PushItemWidth(120.0f * menus::scale);
 
 		auto save_volume_setting = [](const char* key, const int value)
 		{
@@ -923,7 +994,7 @@ void menus::hotkeys()
 	const ImVec4 error_color(0.90f, 0.35f, 0.35f, 1.0f);
 	const ImVec4 success_color(0.40f, 0.78f, 0.40f, 1.0f);
 
-	ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420.0f);
+	ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420.0f * menus::scale);
 	if (audio::are_hotkeys_locked())
 	{
 		ImGui::TextWrapped("%s", localization::text("hotkeys.locked"));
@@ -950,7 +1021,7 @@ void menus::hotkeys()
 
 		ImGui::Separator();
 		ImGui::Text("%s", localization::text(binding.label_key));
-		ImGui::SameLine(230.0f);
+		ImGui::SameLine(230.0f * menus::scale);
 		ImGui::Text("%s", current_key.c_str());
 
 		if (capturing_this)
@@ -1065,11 +1136,11 @@ void menus::hotkeys()
 // Renders project credits, version information, and GitHub entry points.
 void menus::about()
 {
-  ImGui::SetNextWindowSizeConstraints(ImVec2(220.0f, 0.0f), ImVec2(360.0f, FLT_MAX));
+  ImGui::SetNextWindowSizeConstraints(ImVec2(220.0f * menus::scale, 0.0f), ImVec2(360.0f * menus::scale, FLT_MAX));
 	const std::string menu_label = std::string(localization::text("menu.about")) + "##about_menu";
 	if (ImGui::BeginMenu(menu_label.c_str()))
 	{
-       ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 320.0f);
+       ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 320.0f * menus::scale);
 		ImGui::Text("%s", localization::text("about.title"));
 		ImGui::Text("%s", localization::format("about.version", {{ "version", VERSION }}).c_str());
 		ImGui::Separator();
@@ -1171,7 +1242,7 @@ void menus::build_font(ImGuiIO& io)
 	if (fs::exists(font))
 	{
 		// Noto Sans plus ImGui's Cyrillic range includes Latin-1 (áéíóúñ¿¡); emoji and Japanese remain merged below.
-		io.Fonts->AddFontFromFileTTF(&font[0], 18.0f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
+		io.Fonts->AddFontFromFileTTF(&font[0], 18.0f * menus::scale, nullptr, io.Fonts->GetGlyphRangesCyrillic());
 
 		static ImFontConfig cfg;
 		static ImWchar emoji_ranges[] = { 0x1, 0x1FFFF, 0 };
@@ -1181,7 +1252,7 @@ void menus::build_font(ImGuiIO& io)
 			cfg.MergeMode = true;
 			cfg.OversampleH = cfg.OversampleV = 1;
 			//cfg.FontBuilderFlags |= ImGuiFreeTypeBuilderFlags_LoadColor;	//Noto doesnt have color
-			io.Fonts->AddFontFromFileTTF(&emoji[0], 12.0f, &cfg, emoji_ranges);
+			io.Fonts->AddFontFromFileTTF(&emoji[0], 12.0f * menus::scale, &cfg, emoji_ranges);
 		}
 
 		if (fs::exists(font_jp))
@@ -1189,7 +1260,13 @@ void menus::build_font(ImGuiIO& io)
 			ImFontConfig cfg;
 			cfg.OversampleH = cfg.OversampleV = 1;
 			cfg.MergeMode = true;
-			io.Fonts->AddFontFromFileTTF(&font_jp[0], 18.0f, &cfg, io.Fonts->GetGlyphRangesJapanese());
+			io.Fonts->AddFontFromFileTTF(&font_jp[0], 18.0f * menus::scale, &cfg, io.Fonts->GetGlyphRangesJapanese());
 		}
+	}
+	else
+	{
+		ImFontConfig cfg;
+		cfg.SizePixels = 13.0f * menus::scale;
+		io.Fonts->AddFontDefault(&cfg);
 	}
 }

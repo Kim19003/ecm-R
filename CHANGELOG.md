@@ -7,6 +7,7 @@ This changelog tracks the tagged releases recorded in this repository.
 ## [Unreleased]
 
 ### Added
+- Added startup ImGui overlay and font scaling for high-resolution displays (1440p, 4K, ultrawide) configured via [config] ui_scale (defaults to auto), automatically scaling fonts and UI geometry relative to 1080p and monitor DPI with manual factor override support (0.5x to 4.0x).
 - Added `persistent_shuffle` configuration setting under `[config]` (default: `true`), keeping a persistent shuffle order across loading screens and game context changes (Frontend <-> In-game) so the playlist shuffles only once at startup and again when the entire playlist completes, rather than reshuffling on every screen load.
 - Added interactive song selection to the Playlist menu, allowing users to browse all tracks with numbering and artist/title metadata and click or navigate to directly play any chosen song.
 - Added automatic music volume ducking during in-game phone calls, character speech (e.g. Rachel calling in free roam or after car upgrades), and voice messages with smooth asynchronous fading via `BASS_ChannelSlideAttribute`, monitoring both active speech audio streams (`UG2_Speech.big`) and UI message packages, configurable via `[config] duck_music_on_calls` (enabled by default) and `[config] call_duck_volume_percent` (default 25%) with in-game overlay controls.
