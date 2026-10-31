@@ -46,6 +46,7 @@ namespace localization
 			{ "actions.skip", "Skip" },
 			{ "actions.shuffle", "Shuffle" },
 			{ "actions.repeat", "Repeat" },
+			{ "actions.persistent_shuffle", "Persistent Shuffle" },
 			{ "actions.ingame_movie_muting", "In-Game Movie Muting" },
 			{ "actions.pause_music_on_game_pause", "Pause Music on Pause Menu" },
 			{ "actions.duck_music_on_calls", "Lower Music on Calls" },

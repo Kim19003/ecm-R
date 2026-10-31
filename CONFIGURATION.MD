@@ -19,6 +19,7 @@ version = "..."
 [config]
 shuffle_enabled = true
 repeat_enabled = true
+persistent_shuffle = true
 stop_music_on_loading_screens = true
 ingame_movie_muting = true
 pause_music_on_game_pause = true
@@ -103,6 +104,11 @@ Game Folder/
 - **Description:** Loops playback.
 - **Default:** `true`
 - **Behavior:** Controls whether playback returns to the start of the playlist queue once all valid tracks for the current game context have finished.
+
+### `persistent_shuffle`
+- **Description:** Preserves shuffle order across screen loads and context changes without reshuffling on every load.
+- **Default:** `true`
+- **Behavior:** When enabled, the playlist is shuffled once when the game starts and maintains its playback order across screen transitions (e.g. between menus and racing), reshuffling only when the entire playlist completes its cycle (upon playing the last valid track with repeat enabled). If set to `false`, ECM-R uses the legacy behavior of regenerating and reshuffling the playlist on every game context change.
 
 ### `stop_music_on_loading_screens`
 - **Description:** Suspends music during load screens.

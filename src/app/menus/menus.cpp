@@ -853,6 +853,13 @@ void menus::actions()
 			audio::set_repeat_enabled(repeat_enabled);
 		}
 
+		bool persistent_shuffle = audio::persistent_shuffle;
+		const std::string persistent_shuffle_label = std::string(localization::text("actions.persistent_shuffle")) + "##persistent_shuffle";
+		if (ImGui::Checkbox(persistent_shuffle_label.c_str(), &persistent_shuffle))
+		{
+			audio::set_persistent_shuffle(persistent_shuffle);
+		}
+
 		ImGui::Separator();
 		bool ingame_movie_muting = audio::ingame_movie_muting;
 		const std::string movie_muting_label = std::string(localization::text("actions.ingame_movie_muting")) + "##ingame_movie_muting";
@@ -1141,8 +1148,9 @@ void menus::playlist()
 
 				const std::string item_label = std::to_string(i + 1) + ". " + display + "##track_" + std::to_string(i);
 				const bool is_current = (i == audio::current_song_index);
+				const bool is_valid_context = audio::is_track_valid_for_current_context(track.second);
 
-				if (ImGui::MenuItem(item_label.c_str(), nullptr, is_current))
+				if (ImGui::MenuItem(item_label.c_str(), nullptr, is_current, is_valid_context))
 				{
 					audio::play_song_at_order_index(i);
 				}

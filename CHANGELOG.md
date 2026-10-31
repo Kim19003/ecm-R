@@ -7,6 +7,7 @@ This changelog tracks the tagged releases recorded in this repository.
 ## [Unreleased]
 
 ### Added
+- Added `persistent_shuffle` configuration setting under `[config]` (default: `true`), keeping a persistent shuffle order across loading screens and game context changes (Frontend <-> In-game) so the playlist shuffles only once at startup and again when the entire playlist completes, rather than reshuffling on every screen load.
 - Added interactive song selection to the Playlist menu, allowing users to browse all tracks with numbering and artist/title metadata and click or navigate to directly play any chosen song.
 - Added automatic music volume ducking during in-game phone calls, character speech (e.g. Rachel calling in free roam or after car upgrades), and voice messages with smooth asynchronous fading via `BASS_ChannelSlideAttribute`, monitoring both active speech audio streams (`UG2_Speech.big`) and UI message packages, configurable via `[config] duck_music_on_calls` (enabled by default) and `[config] call_duck_volume_percent` (default 25%) with in-game overlay controls.
 - Added modern codec support for FLAC (`.flac`) and Opus (`.opus`) audio files via dynamic loading of optional `bassflac.dll` and `bassopus.dll` add-ons, with Vorbis Comments and ID3 metadata tag resolution.
@@ -18,6 +19,7 @@ This changelog tracks the tagged releases recorded in this repository.
 - Added explicit OpenSpec agent routing and two approval gates: `ecmr-plan` captures approved planning artifacts and reports `ARTIFACTS_READY`, while `/opsx-apply` separately selects `ecmr-dev` for implementation; no ECM-R runtime behavior changed.
 
 ### Changed
+- Updated playlist menu track entries to visually disable tracks that are context-mismatched for the current game context (e.g. In-game only tracks when in menus) while preserving their position in the persistent playlist order.
 - Aligned the Playlist menu display order to the active playback queue (`playlist_order`) rather than raw filesystem order, ensuring the next song function (F10) plays the song directly below the currently playing track in both shuffled and sequential modes, and synchronizing the queue index when shuffle is toggled during playback.
 - Clarified the OpenSpec planner workflow for workflow-only changes: scaffold with `openspec new change "<name>"` without `--skip-specs`, then set `skip_specs: true` in the CLI-resolved `.openspec.yaml` before status-driven artifact capture. Compared with target `main`, this corrects the in-progress workflow integration rather than a released ECM-R runtime regression.
 
